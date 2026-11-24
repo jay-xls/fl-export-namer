@@ -4,6 +4,13 @@ Every release gets a section here **before** it's built - the release workflow
 uses it as the release notes and refuses to run without one.
 Versions: `MAJOR.MINOR.PATCH` - bug fix = patch, new feature = minor.
 
+## [1.6.0] - 2026-11-24
+### Added
+- Export types: pick **Stem, Demo, Mix or Master** in the popup (none until you pick one; click again to clear). `{version}` counts every export of a beat, the new `{typeversion}` counts that beat's exports of the chosen type: the 8th export that's the 1st Master is `SynthTrap_120bpm_Fm_Master_v8_01`.
+### Changed
+- New default name format `{name}_{bpm}bpm_{key}_{type}_v{version}_{typeversion}`, with the version at the end and unpadded (`v8`), the type number two digits (`01`). Configs on an old default format are switched over; custom formats are left alone.
+- Versions keep counting from files named in the older formats (`…_v03`), so an existing beat carries on where it left off.
+
 ## [1.5.0] - 2026-11-24
 ### Changed
 - New name: **FL Export Namer is now DAW Export Fixer**, since it works with Ableton Live too. The project lives at github.com/jlnorge/daw-export-fixer and the guide at jlnorge.github.io/daw-export-fixer.
