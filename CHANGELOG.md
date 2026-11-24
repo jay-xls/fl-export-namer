@@ -4,6 +4,10 @@ Every release gets a section here **before** it's built - the release workflow
 uses it as the release notes and refuses to run without one.
 Versions: `MAJOR.MINOR.PATCH` - bug fix = patch, new feature = minor.
 
+## [1.4.1] - 2026-11-24
+### Fixed
+- The app crashed on launch ("'App' object has no attribute 'tray'") when your FL Studio or Ableton theme differs from the stock look.
+
 ## [1.4.0] - 2026-11-24
 ### Added
 - Ableton Live support: the app watches your Live projects folder, on its own or alongside the FL Studio one. BPM comes from the set's tempo, key from Live's Scale setting or the set's in-key MIDI clips. If the set has none, both are estimated from the audio, and the audio estimates are always one click away to override Live.

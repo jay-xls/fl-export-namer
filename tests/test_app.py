@@ -64,3 +64,22 @@ def test_theme_follows_the_file_when_fl_rewrites_it(tmp_path):
         c.C.clear()
         c.C.update(theme.FL_DEFAULT)
         app.root.destroy()
+
+
+def test_app_starts_with_a_theme_that_differs_from_the_stock_look(tmp_path, monkeypatch):
+    """Regression (1.4.0): a synced FL theme made the app crash on launch ('no attribute tray')."""
+    import tkinter as tk
+    import pytest
+    import theme
+    custom = theme.derive({"accent": "#3399ff"})
+    monkeypatch.setattr(theme, "resolve", lambda cfg: (dict(custom), "synced with FL Studio", None))
+    try:
+        app = c.App()
+    except tk.TclError:  # no display available
+        pytest.skip("no display")
+    try:
+        assert c.C["accent"] == "#3399ff"
+    finally:
+        c.C.clear()
+        c.C.update(theme.FL_DEFAULT)
+        app.root.destroy()

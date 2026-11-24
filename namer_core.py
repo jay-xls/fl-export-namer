@@ -38,7 +38,7 @@ import naming  # noqa: E402
 import theme  # noqa: E402
 
 APP = "FL Export Namer"
-__version__ = "1.4.0"
+__version__ = "1.4.1"
 # GitHub repo releases are published to (owner/name). Used by the update check.
 UPDATE_REPO = "jlnorge/fl-export-namer"
 FROZEN = getattr(sys, "frozen", False)  # running from the PyInstaller build
@@ -1674,6 +1674,7 @@ class App:
         self.cfg = load_config()
         self.daw = self.cfg.get("default_daw") if self.cfg.get("default_daw") in DAWS else "fl"  # whose colours
         self.theme_src, self.theme_mtime, self._theme_seen = None, None, None
+        self.tray = None  # before apply_theme(): a theme that differs from the stock look rethemes the tray
         self.apply_theme()
         self.state = load_json(STATE_PATH, {"projects": {}, "ignored_paths": []})
         self.ui_q: queue.Queue = queue.Queue()
@@ -1684,7 +1685,6 @@ class App:
         self.own_outputs: set[str] = set()   # files we wrote - no watcher treats them as new exports
         self.watchers = {d: ExportWatcher(self, d) for d in DAWS}
         self.watching = False
-        self.tray = None
         self.root.after(100, self.pump)
         self.root.after(THEME_POLL_MS, self.watch_theme)
 
@@ -1739,7 +1739,7 @@ class App:
 
     def retheme(self):
         """Colours changed: refresh what stays on screen. Popups pick it up next time."""
-        if self.tray is not None:
+        if getattr(self, "tray", None) is not None:
             try:
                 self.tray.icon = logo_image()
             except Exception:
