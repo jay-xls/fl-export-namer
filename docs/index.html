@@ -134,7 +134,7 @@ footer{border-top:1px solid var(--line);margin-top:56px;padding-top:16px;color:v
       <ul><li><a href="#sorter-use">using it</a></li><li><a href="#sorter-hints">what it reads from file names</a></li></ul></li>
     <li><a href="#tray">tray menu</a></li>
     <li><a href="#settings">settings</a>
-      <ul><li><a href="#tabs">FL studio / ableton tabs</a></li><li><a href="#theme">colours + FL / ableton theme</a></li></ul></li>
+      <ul><li><a href="#tabs">FL studio / ableton tabs</a></li><li><a href="#theme">colours + FL / ableton theme</a></li><li><a href="#advanced">extra options (config.json)</a></li></ul></li>
     <li><a href="#format">name format</a></li>
     <li><a href="#accuracy">how accurate is it</a></li>
     <li><a href="#trouble">troubleshooting</a></li>
@@ -239,7 +239,7 @@ footer{border-top:1px solid var(--line);margin-top:56px;padding-top:16px;color:v
     <tr><td>bpm</td><td>the saved project's tempo → the file name → estimated from the audio. <b>check against audio</b> adds the audio's top 3 as chips.</td><td>no tempo saved (FL default 140), couldn't read it, or the project's older than the export</td></tr>
     <tr><td>key</td><td>Ableton only: the set's scale (see <a href="#ableton-read">above</a>) → what you used last time for this project → detected from the audio. Top 3 as chips, <b>▾</b> lists all 24 keys.</td><td>the detector's unsure. Check it.</td></tr>
     <tr><td>type</td><td>nothing until you click <b>STEM</b>, <b>DEMO</b>, <b>MIX</b> or <b>MASTER</b>. Click the selected one again to clear it. No type = the type and its number are left out of the name.</td><td>-</td></tr>
-    <tr><td>version</td><td>every export of that beat counts: highest existing version in your beats folder + 1, whatever the type. Recalculates if you change the name.</td><td>-</td></tr>
+    <tr><td>version</td><td>every export of that beat counts: highest existing version in your beats folder + 1, whatever the type. Recalculates if you change the name. The line under it says what's already there, e.g. <i>v7 already in Nightdrive 24.11.2026 · 1st Master</i>, or <i>first export of this beat</i>.</td><td>-</td></tr>
     <tr><td>type #</td><td>shown once a type is picked: how many exports of that type this beat has had + 1. The 8th export overall that's the 1st Master is <code>Master_v8_01</code>.</td><td>-</td></tr>
   </tbody></table>
   <p>Once you've saved a beat, its name and key are remembered for that project, so the next export of it is usually one <kbd>Enter</kbd>.</p>
@@ -288,7 +288,7 @@ footer{border-top:1px solid var(--line);margin-top:56px;padding-top:16px;color:v
     <li>Each beat gets the popup. <b>BPM</b> is estimated from the audio with the top 3 as chips. The half/double-time option (70 vs 140) is always one of them.</li>
     <li>The folder date is the old file's own date, i.e. roughly when you made it, not today.</li>
     <li><b>keep originals</b> (bottom right) copies instead of moving. <b>Turn it on for your first big batch</b>, check the results, then delete the old copies yourself.</li>
-    <li><b>undo last</b>, <b>clear queue</b>, <b>settings</b> and <b>log</b> are all in the window. Drop more files any time and they join the queue.</li>
+    <li><b>RECENT</b> lists what you've sorted this session. <b>undo last</b>, <b>clear queue</b>, <b>settings</b> and <b>log</b> are all in the window. Click the <b>SAVES TO</b> path at the bottom to open that beats folder. Drop more files any time and they join the queue.</li>
   </ul>
   <h3 id="sorter-hints">what it reads from file names</h3>
   <table class="stack"><thead><tr><th>in the name</th><th>becomes</th><th>example</th></tr></thead><tbody>
@@ -353,6 +353,18 @@ footer{border-top:1px solid var(--line);margin-top:56px;padding-top:16px;color:v
     </div>
   </div>
   <div class="note"><p><b>close, not exact.</b> FL's theme files don't spell out every panel colour. Most are FL's own grey shifted by the theme's hue / saturation / lightness sliders, so the app works them out. It gets close. If something's a shade off, switch to <b>custom</b> and fix it with the eyedropper.</p></div>
+
+  <h3 id="advanced">extra options (config.json)</h3>
+  <p>A few settings have no box in the settings window. They're in <code>%APPDATA%\DAW Export Fixer\config.json</code> (it gets them all once you've pressed SAVE in settings). Quit the app first (tray → <b>quit</b>), edit the file in Notepad, then start it again. Leave a value out and the default is used.</p>
+  <table class="stack"><thead><tr><th>key</th><th>what it does</th><th>default</th></tr></thead><tbody>
+    <tr><td><code>version_digits</code></td><td>zero-padding for <code>{version}</code>: <code>2</code> gives <code>v08</code></td><td><code>1</code> (<code>v8</code>)</td></tr>
+    <tr><td><code>type_digits</code></td><td>zero-padding for <code>{typeversion}</code>: <code>1</code> gives <code>_1</code></td><td><code>2</code> (<code>_01</code>)</td></tr>
+    <tr><td><code>folder_date_format</code></td><td>the date on beat folders, in Python <code>strftime</code> style: <code>"%Y-%m-%d"</code> gives <code>Nightdrive 2026-11-24</code></td><td><code style="white-space:nowrap">"%d.%m.%Y"</code></td></tr>
+    <tr><td><code>stale_warning_minutes</code></td><td>how old the saved project can be before the popup warns you in red</td><td><code>2</code></td></tr>
+    <tr><td><code>settle_seconds</code></td><td>how long a render has to stop growing before it counts as finished. Raise it if popups come up before a long render is done.</td><td><code>1.5</code></td></tr>
+    <tr><td><code>group_seconds</code></td><td>how long to wait for more files from the same render (the MP3 next to the WAV, stems) before the popup opens</td><td><code>3</code></td></tr>
+  </tbody></table>
+  <div class="warn"><p><b>changing the folder date format</b> means existing beat folders (dated the old way) aren't found any more, so the next export of an old beat starts a new folder. Pick a format before you have lots of beats, or rename the old folders to match.</p></div>
 
   <h2 id="format">name format</h2>
   <p>Default: <code>{name}_{bpm}bpm_{key}_{type}_v{version}_{typeversion}</code>, e.g. <code>SynthTrap_120bpm_Fm_Master_v8_01</code>. Must contain <code>{name}</code> and <code>{version}</code>. If you were on the old default (<code>…_v{version}</code>), it's switched to this one for you; your own formats are left alone.</p>
@@ -443,10 +455,21 @@ footer{border-top:1px solid var(--line);margin-top:56px;padding-top:16px;color:v
     <li>Update check: a toast tells you when a new version is out. Turn it off in settings.</li>
     <li>Builds now come from GitHub, tested automatically, with checksums.</li>
   </ul>
+  <h3>1.1.0 · 24.11.26</h3>
+  <ul>
+    <li>Shareable Windows build: an installer, no Python needed. The watcher and Beat Sorter are one app.</li>
+    <li><b>start with windows</b> toggle, version number in settings, tray → <b>Open Beat Sorter</b>, log link in Beat Sorter.</li>
+    <li>Fixed: Beat Sorter could show the key in the BPM box.</li>
+  </ul>
+  <h3>1.0.0 · 20.11.26</h3>
+  <ul>
+    <li>First release: export watcher (BPM read from the .flp, key detected from the audio, automatic versions) and Beat Sorter for old exports.</li>
+    <li>Dated beat folders, FL auto-names (<code>Project_23</code>) kept whole, undo, skip reasons in the log.</li>
+  </ul>
 
   <footer>
     <a href="#top">Full table of contents ↑</a>
-    <span>last edit 24.11.26 · 13 sections · v1.3.1</span>
+    <span>last edit 24.11.26 · 14 sections · v1.6.0</span>
   </footer>
 </main>
 </div>
