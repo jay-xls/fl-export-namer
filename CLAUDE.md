@@ -1,18 +1,20 @@
 # FL Export Namer - project brief for Claude
 
-Windows tray app for FL Studio producers (owner: Jay). Watches the FL projects folder; when a
-render lands it shows an FL-themed popup with name / BPM / key / version pre-filled, then renames
-and files the export into the beats folder. Beat Sorter (same app, `--sorter`) does the same for
+Windows tray app for FL Studio and Ableton Live producers (owner: Jay). Watches the FL and/or
+Ableton projects folders; when a render lands it shows a popup themed like the program it came
+from, with name / BPM / key / version pre-filled, then renames and files the export into that
+program's beats folder. Beat Sorter (same app, `--sorter`) does the same for
 old exports by estimating BPM + key from the audio. Shared with friends as a PyInstaller build.
 
 ## Files
 | file | what |
 |---|---|
-| `namer_core.py` | everything shared: config/state, live palette (`C`), `Job`, `build_job`, `dest_dir`, `ExportWatcher`, `ExportPopup`, `SettingsWindow`, `ThemeEditor` + `ScreenPicker` (eyedropper), `Toast`, `App` (tray, apply/undo, theme sync), startup toggle, `__version__`, watcher `main()` |
-| `theme.py` | `FL_DEFAULT` palette (FL stock grey + orange), `.flstheme` parsing, `derive()` from 5 seed colours, finding FL's `__current.flstheme`, `resolve(cfg)` |
+| `namer_core.py` | everything shared: config/state, per-program config (`DAWS`, `daw_cfg`), live palette (`C`), `Job`, `build_job`, `dest_dir`, `ExportWatcher` (one per program), `ExportPopup`, `SettingsWindow`, `ThemeEditor` + `ScreenPicker` (eyedropper), `Toast`, `App` (tray, apply/undo, theme sync), startup toggle, `__version__`, watcher `main()` |
+| `theme.py` | `FL_DEFAULT` / `ABLETON_DEFAULT` palettes, `.flstheme` + Ableton `.ask` parsing, `derive()` from 5 seed colours, finding FL's `__current.flstheme` / Live's current theme (via Preferences.cfg), `resolve(cfg)` |
 | `sorter_app.py` | Beat Sorter window (`SorterApp(App)`), drag-and-drop, file-name hints, single-instance forwarding (port 47614) |
 | `naming.py` | templates, version numbering, name cleanup, `parse_hints`, `is_generic` (Project_23) |
 | `flp_reader.py` | minimal .flp parser: tempo (event 156, BPM x1000), title. FL 2026 quirk: event 172 is 1 byte - parse both ways |
+| `als_reader.py` | streaming .als (gzip XML) parser: tempo (`MainTrack`/`MasterTrack` Tempo/Manual), key from Live 12 Scale (`InKey`), in-key clip scales, or a non-default set scale |
 | `key_detect.py` / `bpm_detect.py` | numpy-only key + tempo estimation |
 | `launcher.py` | packaged entry point: default = watcher, `--sorter`, `--selftest` |
 | `fl_export_namer.pyw`, `beat_sorter.pyw` | thin entry points for running from source |
@@ -24,7 +26,7 @@ old exports by estimating BPM + key from the audio. Shared with friends as a PyI
 | `requirements.txt` / `requirements-dev.txt` | pinned runtime / build+test dependencies |
 
 ## Run / test / build (Windows)
-- From source: `py fl_export_namer.pyw` (watcher), `py beat_sorter.pyw`, `py fl_export_namer.pyw --demo` (popup with sample data), `py fl_export_namer.pyw --test "C:\path\render.wav"`.
+- From source: `py fl_export_namer.pyw` (watcher), `py beat_sorter.pyw`, `py fl_export_namer.pyw --demo` (popup with sample data, add `--ableton` for the Ableton one), `py fl_export_namer.pyw --test "C:\path\render.wav"`.
 - Self-test: `py launcher.py --selftest` -> writes `%APPDATA%\FL Export Namer\selftest.txt`.
 - Tests: `py -m pytest tests` (needs `requirements-dev.txt`).
 - Local build: double-click `build_kit\build.bat`. Output in `dist\`. Real releases come from the `release` workflow.
@@ -42,6 +44,9 @@ old exports by estimating BPM + key from the audio. Shared with friends as a PyI
 - `UPDATE_REPO` in `namer_core.py` must stay the real `owner/repo`.
 
 ## Rules for changes
+- Two programs (`DAWS = ("fl", "ableton")`). Per-program settings are listed in `PER_DAW`: FL keeps the
+  original key names (`watch_folder`), Ableton's are prefixed (`ableton_watch_folder`). Read them through
+  `daw_cfg(cfg, daw)` / `app.dcfg()`, never `cfg["watch_folder"]` directly. `app.set_daw()` swaps `C`.
 - Keep the FL look: colours only from `C` (never hard-coded hex - users can re-theme, light themes included;
   text on an accent background is `C["on_accent"]`), widgets `FlatButton` / `flat_entry` / `Toggle` / `Segmented` / `ThemedWindow`.
   New palette keys go in `theme.FL_DEFAULT` and `theme.derive()`. The guide (`docs/`) uses the FL default palette only.

@@ -20,7 +20,7 @@ hidden += [
     "watchdog.observers.read_directory_changes",  # Windows folder watching
     "PIL._tkinter_finder",
     "PIL.ImageGrab", "PIL.ImageTk",            # theme eyedropper (screen colour picker)
-    "sorter_app", "namer_core", "naming", "theme", "flp_reader", "key_detect", "bpm_detect",
+    "sorter_app", "namer_core", "naming", "theme", "flp_reader", "als_reader", "key_detect", "bpm_detect",
 ]
 
 a = Analysis(

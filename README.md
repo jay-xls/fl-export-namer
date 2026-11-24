@@ -1,7 +1,7 @@
 # FL Export Namer
 
-**Export a beat from FL Studio, hit Enter, done.** A small Windows app that watches your FL Studio
-projects folder. When you export, it pops up with the name, BPM, key and next version number
+**Export a beat from FL Studio or Ableton Live, hit Enter, done.** A small Windows app that watches your FL Studio
+and/or Ableton projects folders. When you export, it pops up with the name, BPM, key and next version number
 already filled in, then renames the file and files it into one tidy beats folder. Comes with
 **Beat Sorter** for your back catalogue: drop old, randomly named exports in and it works out the
 BPM and key from the audio.
@@ -15,6 +15,7 @@ Windows 10/11 · free · no Python needed. Windows will say the app is from an u
 
 ## Features
 - **BPM straight from the project** - read from the saved `.flp`, not guessed
+- **Ableton Live too** - tempo and key (Live's Scale) read from the `.als`; watch FL and Ableton at the same time, each with its own folders and theme
 - **Key detection** from the audio, top 3 guesses one click away
 - **Automatic versions** - v01, v02, v03… per beat; nothing is ever overwritten
 - **Tidy folders** - one folder per beat, dated by its first export (`Nightdrive 24.11.2026`)

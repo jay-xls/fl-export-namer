@@ -11,6 +11,12 @@ closes, which is what "Match FL Studio" follows.
 
 The surface maths below is an approximation fitted to screenshots. It gets close, and
 the custom colour editor (with the screen eyedropper) can fine-tune anything it misses.
+
+Ableton Live themes (.ask) are XML: `<SkinManager>` holds named colours, either as
+`<Name><R Value=../><G ../><B ../><Alpha ../></Name>` (Live 10/11) or `<Name Value="#rrggbb"/>`
+(Live 12). Live doesn't write its current theme to a file, so "Match Ableton" looks up
+which theme name Live's Preferences.cfg mentions (rewritten when Live closes) and loads
+that theme's .ask from Live's install or user Themes folders.
 """
 
 from __future__ import annotations
@@ -18,6 +24,7 @@ from __future__ import annotations
 import colorsys
 import os
 import sys
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 # ------------------------------------------------------------ palettes ----
@@ -278,9 +285,171 @@ def find_current_theme() -> Path | None:
     return None
 
 
+# --------------------------------------------------------- Ableton Live ----
+# Live 12's stock "Default Dark Neutral Medium" look: neutral greys, Live's orange.
+ABLETON_SEEDS = {"bg": "#363636", "panel": "#2a2a2a", "field": "#1e1e1e", "accent": "#ffad56", "text": "#dcdcdc"}
+ABLETON_DEFAULT = derive(ABLETON_SEEDS, {"ok": "#03c3d5"})
+
+DEFAULTS = {"fl": FL_DEFAULT, "ableton": ABLETON_DEFAULT}
+DEFAULT_NAMES = {"fl": "FL default", "ableton": "Ableton default"}
+
+# .ask colour names for each seed, best match first.
+ASK_SEEDS = {
+    "bg": ("SurfaceBackground", "DetailViewBackground", "SurfaceArea"),
+    "panel": ("SurfaceHighlight", "SurfaceArea", "Desktop"),
+    "field": ("ControlBackground", "DisplayBackground", "Desktop"),
+    "accent": ("ChosenDefault", "ControlOnForeground", "Progress"),
+    "text": ("ControlForeground", "TextDisp"),
+}
+
+
+def parse_ask(text: str) -> dict:
+    """{'SurfaceBackground': '#rrggbb', ...} from an Ableton .ask theme (both formats)."""
+    try:
+        root = ET.fromstring(text.lstrip("\ufeff").encode("utf-8"))
+    except ET.ParseError as e:
+        raise ValueError(f"doesn't look like an Ableton theme ({e})") from e
+    sm = root if root.tag == "SkinManager" else root.find(".//SkinManager")
+    if sm is None:
+        raise ValueError("doesn't look like an Ableton theme")
+    out: dict = {}
+    for el in sm.iter():
+        if el is sm or el.tag in out:
+            continue
+        v = (el.get("Value") or "").strip()
+        if v.startswith("#") and len(v) in (7, 9) and is_hex(v[:7]):
+            out[el.tag] = v[:7].lower()
+            continue
+        chans = [el.find(c) for c in "RGB"]
+        if all(c is not None for c in chans):
+            try:
+                out[el.tag] = to_hex(int(float(c.get("Value"))) for c in chans)
+            except (TypeError, ValueError):
+                pass
+    if not out:
+        raise ValueError("doesn't look like an Ableton theme")
+    return out
+
+
+def read_ask(path) -> dict:
+    data = Path(path).read_bytes()
+    for enc in ("utf-8-sig", "utf-16", "cp1252"):
+        try:
+            return parse_ask(data.decode(enc))
+        except (UnicodeDecodeError, ValueError):
+            continue
+    raise ValueError("doesn't look like an Ableton theme")
+
+
+def palette_from_ask(colors: dict) -> dict:
+    seeds = {}
+    for seed, names in ASK_SEEDS.items():
+        seeds[seed] = next((colors[n] for n in names if n in colors), ABLETON_SEEDS[seed])
+    if seeds["panel"] == seeds["bg"]:  # Live themes often share one surface colour
+        lift = "#ffffff" if luminance(seeds["bg"]) < 0.35 else "#000000"
+        seeds["panel"] = mix(seeds["bg"], lift, 0.07)
+    extra = {"ok": colors["SelectionFrame"]} if "SelectionFrame" in colors else {"ok": ABLETON_DEFAULT["ok"]}
+    return derive(seeds, extra)
+
+
+def _globs(base: Path, pattern: str) -> list[Path]:
+    try:
+        return sorted(base.glob(pattern)) if base.is_dir() else []
+    except OSError:
+        return []
+
+
+def ableton_pref_files() -> list[Path]:
+    """Live's Preferences.cfg files, newest first."""
+    found = []
+    appdata = os.environ.get("APPDATA")
+    if appdata:
+        found += _globs(Path(appdata) / "Ableton", "Live */Preferences/Preferences.cfg")
+    found += _globs(Path.home() / "Library" / "Preferences" / "Ableton", "Live */Preferences.cfg")
+
+    def mt(p):
+        try:
+            return p.stat().st_mtime
+        except OSError:
+            return 0
+    return sorted(set(found), key=mt, reverse=True)
+
+
+def ableton_theme_dirs() -> list[Path]:
+    """Folders holding Live's built-in and user .ask themes."""
+    out: list[Path] = []
+    for env in ("ProgramData", "ProgramFiles", "ProgramW6432"):
+        if os.environ.get(env):
+            out += _globs(Path(os.environ[env]) / "Ableton", "*/Resources/Themes")
+    out += _globs(Path("/Applications"), "Ableton Live*.app/Contents/App-Resources/Themes")
+    appdata = os.environ.get("APPDATA")
+    if appdata:
+        out += _globs(Path(appdata) / "Ableton", "Live */Themes")
+    out += _globs(Path.home() / "Library" / "Preferences" / "Ableton", "Live */Themes")
+    for docs in (documents_dir(), Path.home() / "Music"):
+        out += _globs(docs / "Ableton" / "User Library", "Themes")
+    return list(dict.fromkeys(out))
+
+
+def find_ableton_theme() -> tuple[Path | None, Path | None]:
+    """(the .ask Live is using, the Preferences.cfg it was read from). Either can be None."""
+    prefs = ableton_pref_files()
+    if not prefs:
+        return None, None
+    pref = prefs[0]
+    asks = [p for d in ableton_theme_dirs() for p in _globs(d, "*.ask")]
+    try:
+        data = pref.read_bytes()
+    except OSError:
+        return None, pref
+    best = None
+    for p in asks:
+        name = p.stem
+        if name.encode("utf-16-le") in data or name.encode("utf-8") in data:
+            if best is None or len(name) > len(best.stem):
+                best = p
+    return best, pref
+
+
+def auto_source(daw: str = "fl") -> Path | None:
+    """The file that changes when the DAW's current theme changes."""
+    if daw == "ableton":
+        return find_ableton_theme()[1]
+    return find_current_theme()
+
+
+def _resolve_ableton(cfg: dict) -> tuple[dict, str, Path | None]:
+    mode = cfg.get("theme", "auto")
+    if mode == "custom":
+        return derive(cfg.get("theme_colors") or {}, {"ok": ABLETON_DEFAULT["ok"]}), "your own colours", None
+    if mode == "default":
+        return dict(ABLETON_DEFAULT), "Ableton Live's stock look", None
+    if mode == "file":
+        if not cfg.get("theme_file"):
+            return dict(ABLETON_DEFAULT), "no theme file chosen yet - using Ableton default", None
+        p = Path(cfg["theme_file"])
+        try:
+            return palette_from_ask(read_ask(p)), f"from {p.name}", p
+        except Exception as e:
+            return dict(ABLETON_DEFAULT), f"couldn't read {p.name} ({type(e).__name__}) - using Ableton default", p
+    ask, pref = find_ableton_theme()
+    if not pref:
+        return dict(ABLETON_DEFAULT), "Ableton Live's settings not found - using Ableton default", None
+    if not ask:
+        return (dict(ABLETON_DEFAULT), "couldn't tell which theme Live uses - using Ableton default "
+                "(load its .ask file instead)", pref)
+    try:
+        return palette_from_ask(read_ask(ask)), f"synced with Ableton ({ask.stem}, updates when Live closes)", pref
+    except Exception as e:
+        return dict(ABLETON_DEFAULT), f"couldn't read {ask.name} ({type(e).__name__}) - using Ableton default", pref
+
+
 # ------------------------------------------------------------ resolving ----
 def resolve(cfg: dict) -> tuple[dict, str, Path | None]:
-    """(palette, one-line status for Settings, file to watch for changes or None)."""
+    """(palette, one-line status for Settings, file to watch for changes or None).
+    cfg["daw"] = "ableton" resolves an Ableton theme; anything else is FL Studio."""
+    if cfg.get("daw") == "ableton":
+        return _resolve_ableton(cfg)
     mode = cfg.get("theme", "auto")
     if mode == "custom":
         return derive(cfg.get("theme_colors") or {}), "your own colours", None

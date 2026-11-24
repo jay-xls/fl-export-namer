@@ -112,7 +112,7 @@ footer{border-top:1px solid var(--line);margin-top:56px;padding-top:16px;color:v
     <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="1" y="1" width="20" height="20" rx="4" fill="#1f2528" stroke="#f7a13d" stroke-width="1.5"/><g fill="#f7a13d"><rect x="4.5" y="11" width="2" height="6"/><rect x="7.6" y="7" width="2" height="10"/><rect x="10.7" y="5" width="2" height="12"/><rect x="13.8" y="9" width="2" height="8"/><rect x="16.9" y="7.5" width="1.6" height="9.5"/></g></svg>
     <span>FL Export Namer<span class="g"> guide</span></span>
   </a>
-  <a class="dl" href="https://github.com/jlnorge/fl-export-namer/releases/latest">download</a><span class="ver">v1.3.1 · windows</span>
+  <a class="dl" href="https://github.com/jlnorge/fl-export-namer/releases/latest">download</a><span class="ver">v1.4.0 · windows</span>
 </header>
 
 <div class="wrap">
@@ -124,6 +124,8 @@ footer{border-top:1px solid var(--line);margin-top:56px;padding-top:16px;color:v
       <ul><li><a href="#setup-exe">setup.exe</a></li><li><a href="#zip">zip version</a></li><li><a href="#smartscreen">"windows protected your pc"</a></li></ul></li>
     <li><a href="#first-run">first run</a></li>
     <li><a href="#exporting">exporting from FL</a></li>
+    <li><a href="#ableton">ableton live</a>
+      <ul><li><a href="#ableton-export">exporting from ableton</a></li><li><a href="#ableton-read">what it reads from the set</a></li><li><a href="#both">watching both at once</a></li></ul></li>
     <li><a href="#popup">the popup</a>
       <ul><li><a href="#fields">where each field comes from</a></li><li><a href="#keys">buttons + keys</a></li></ul></li>
     <li><a href="#files">where files go</a>
@@ -132,7 +134,7 @@ footer{border-top:1px solid var(--line);margin-top:56px;padding-top:16px;color:v
       <ul><li><a href="#sorter-use">using it</a></li><li><a href="#sorter-hints">what it reads from file names</a></li></ul></li>
     <li><a href="#tray">tray menu</a></li>
     <li><a href="#settings">settings</a>
-      <ul><li><a href="#theme">colours + FL theme</a></li></ul></li>
+      <ul><li><a href="#tabs">FL studio / ableton tabs</a></li><li><a href="#theme">colours + FL / ableton theme</a></li></ul></li>
     <li><a href="#format">name format</a></li>
     <li><a href="#accuracy">how accurate is it</a></li>
     <li><a href="#trouble">troubleshooting</a></li>
@@ -143,12 +145,12 @@ footer{border-top:1px solid var(--line);margin-top:56px;padding-top:16px;color:v
 
 <main id="top">
   <h1>edit. 24.11.26</h1>
-  <p class="credits"><b>FL Export Namer v1.3.1</b>, made by <b>Jay</b>. Windows 10/11 · no Python needed · works with FL Studio project folders · free, share it with whoever.<br>
+  <p class="credits"><b>FL Export Namer v1.4.0</b>, made by <b>Jay</b>. Windows 10/11 · no Python needed · works with FL Studio and Ableton Live project folders · free, share it with whoever.<br>
   <a href="https://github.com/jlnorge/fl-export-namer/releases/latest">download</a> · <a href="https://github.com/jlnorge/fl-export-namer/issues/new/choose">report a bug / suggest a feature</a> · <a href="https://github.com/jlnorge/fl-export-namer">source on GitHub</a></p>
-  <p class="syn">A small Windows app that watches your FL Studio projects folder. When you export a beat, it pops up with the name, BPM, key and next version number already filled in. Hit Enter and the file is renamed and filed into one tidy beats folder. It comes with <b>Beat Sorter</b> for the pile of old, randomly named exports: drop them in, and it works out the BPM and key from the audio.</p>
+  <p class="syn">A small Windows app that watches your FL Studio projects folder, your Ableton Live projects folder, or both at once. When you export a beat, it pops up with the name, BPM, key and next version number already filled in. Hit Enter and the file is renamed and filed into one tidy beats folder. It comes with <b>Beat Sorter</b> for the pile of old, randomly named exports: drop them in, and it works out the BPM and key from the audio.</p>
 
   <div class="jump" aria-label="Jump to">
-    <a href="#install">install</a><a href="#first-run">first run</a><a href="#exporting">exporting</a><a href="#popup">the popup</a><a href="#files">where files go</a><a href="#sorter">beat sorter</a><a href="#tray">tray menu</a><a href="#settings">settings</a><a href="#format">name format</a><a href="#accuracy">accuracy</a><a href="#trouble">troubleshooting</a><a href="#uninstall">uninstall</a>
+    <a href="#install">install</a><a href="#first-run">first run</a><a href="#exporting">exporting</a><a href="#ableton">ableton</a><a href="#popup">the popup</a><a href="#files">where files go</a><a href="#sorter">beat sorter</a><a href="#tray">tray menu</a><a href="#settings">settings</a><a href="#format">name format</a><a href="#accuracy">accuracy</a><a href="#trouble">troubleshooting</a><a href="#uninstall">uninstall</a>
   </div>
 
   <div class="hero">
@@ -168,7 +170,7 @@ footer{border-top:1px solid var(--line);margin-top:56px;padding-top:16px;color:v
 
   <p class="lbl" style="margin:26px 0 4px;font-weight:600;color:var(--muted)">in this section</p>
   <ul class="toc">
-    <li><a href="#install">install</a></li><li><a href="#first-run">first run</a></li><li><a href="#exporting">exporting from FL</a></li>
+    <li><a href="#install">install</a></li><li><a href="#first-run">first run</a></li><li><a href="#exporting">exporting from FL</a></li><li><a href="#ableton">ableton live</a></li>
     <li><a href="#popup">the popup</a></li><li><a href="#files">where files go</a></li><li><a href="#sorter">beat sorter</a></li>
     <li><a href="#tray">tray menu</a></li><li><a href="#settings">settings</a></li><li><a href="#format">name format</a></li>
     <li><a href="#accuracy">how accurate is it</a></li><li><a href="#trouble">troubleshooting</a></li><li><a href="#uninstall">files, updates + uninstall</a></li>
@@ -188,10 +190,15 @@ footer{border-top:1px solid var(--line);margin-top:56px;padding-top:16px;color:v
   <div class="warn"><p>The app isn't code-signed (that costs money every year), so Windows doesn't recognise the publisher. Click <b>More info</b> → <b>Run anyway</b>. Some antivirus tools also flag apps built this way (PyInstaller) by mistake. If yours quarantines it, restore it and add an exception, or skip it if you don't trust the source you got it from. Each release lists SHA256 checksums, so you can confirm your download matches what was built.</p></div>
 
   <h2 id="first-run">first run</h2>
-  <p>A setup window asks for two folders:</p>
+  <p>A setup window asks for two folders per program. It has an <b>FL STUDIO</b> and an <b>ABLETON</b> tab at the top: fill in the one you use, or both, and tick <b>watch for … exports</b> on each tab you want watched. FL Studio:</p>
   <table class="stack"><thead><tr><th>setting</th><th>what to pick</th><th>default</th></tr></thead><tbody>
     <tr><td>watch folder</td><td>where FL saves your projects. Every subfolder is watched.</td><td><code>Documents\Image-Line\FL Studio\Projects</code></td></tr>
     <tr><td>beats folder</td><td>where finished, named exports should end up. Created on first save.</td><td><code>Music\FL Export</code></td></tr>
+  </tbody></table>
+  <p>Ableton (its watch box is ticked for you if an Ableton folder already exists):</p>
+  <table class="stack"><thead><tr><th>setting</th><th>what to pick</th><th>default</th></tr></thead><tbody>
+    <tr><td>watch folder</td><td>the folder your Live projects (the <code>… Project</code> folders) are saved in. Every subfolder is watched.</td><td><code>Music\Ableton Projects</code> or <code>Music\Ableton</code> if you have one, else <code>Documents\Ableton</code></td></tr>
+    <tr><td>beats folder</td><td>where named Ableton exports end up. Separate from the FL one, but you can point both at the same folder.</td><td><code>Music\Ableton Export</code></td></tr>
   </tbody></table>
   <p>Hit <b>START WATCHING</b>. From then on it lives in the system tray: the orange bars icon, bottom right. Check the <kbd>^</kbd> overflow arrow if you can't see it. Drag it onto the taskbar to keep it visible.</p>
 
@@ -204,12 +211,32 @@ footer{border-top:1px solid var(--line);margin-top:56px;padding-top:16px;color:v
   <div class="note"><p><b>save the project before exporting</b> if you changed the tempo. BPM comes from the saved .flp, so an unsaved tempo change gives you the old number. The popup warns you in red if the project was last saved more than 2 minutes before the export.</p></div>
   <p>Ignored on purpose: anything rendered <i>outside</i> the watch folder, anything already inside the beats folder, and subfolders named <code>Backup</code>, <code>Recorded</code>, <code>Audio</code>, <code>Sliced</code>, <code>Audio Logger</code>, <code>Autosave</code> or <code>Samples</code>. That stops recordings and backups from triggering popups.</p>
 
+  <h2 id="ableton">ableton live</h2>
+  <p>Everything above works the same for Ableton Live. The app watches your Live projects folder too, and the popup shows up in Ableton colours with <b>· ABLETON</b> in its title bar, so you always know which program an export came from.</p>
+  <h3 id="ableton-export">exporting from ableton</h3>
+  <ol class="steps">
+    <li><b>Save the set</b> (<kbd>Ctrl</kbd>+<kbd>S</kbd>) so the tempo and scale on disk are current.</li>
+    <li><i>File → Export Audio/Video</i>, and save into the set's <code>… Project</code> folder (Live's suggestion) or anywhere else inside the watch folder.</li>
+    <li>The popup appears once the render's finished. Check it, press <kbd>Enter</kbd>.</li>
+  </ol>
+  <p>Ignored on purpose in the Ableton folder: <code>Backup</code>, <code>Samples</code> (Live's recordings, freezes and consolidates), <code>Ableton Project Info</code>, <code>User Library</code>, <code>Factory Packs</code>, <code>Live Recordings</code>, <code>Recorded</code> and <code>Processed</code>.</p>
+  <h3 id="ableton-read">what it reads from the set</h3>
+  <table class="stack"><thead><tr><th>field</th><th>from the .als</th><th>if the set doesn't say</th></tr></thead><tbody>
+    <tr><td>bpm</td><td>the set's tempo</td><td>the file name, else estimated from the audio (top 3 as chips)</td></tr>
+    <tr><td>key</td><td>Live's <b>Scale</b> setting (Live 12) when scale mode is on → else the scale most of your in-key MIDI clips use → else the set's scale if you changed it from Live's default C Major. Modes count as their nearest key: D Dorian → <code>Dm</code>.</td><td>remembered for the project, or detected from the audio</td></tr>
+    <tr><td>name</td><td>the set's file name</td><td>the export's file name</td></tr>
+  </tbody></table>
+  <p>The audio detector runs anyway, so its top 3 key guesses always sit beside the key as chips. Click one to override Live. For BPM, <b>check against audio</b> next to the box does the same. If you change the key Live gave you, the app remembers that for the project, until you set a different scale in Live.</p>
+  <div class="note"><p><b>no set found?</b> If the export isn't next to an <code>.als</code> (or in <code>&lt;name&gt; Project\&lt;name&gt;.als</code> under the watch folder), BPM and key are both estimated from the audio, like in <a href="#sorter">beat sorter</a>.</p></div>
+  <h3 id="both">watching both at once</h3>
+  <p>Tick <b>watch for … exports</b> on both tabs in settings and both folders are watched side by side. The folders can even overlap. If one sits inside the other, exports in the inner folder belong to that program. If they're the same folder, the project file next to the export decides: an <code>.als</code> means Ableton, an <code>.flp</code> means FL Studio.</p>
+
   <h2 id="popup">the popup</h2>
   <h3 id="fields">where each field comes from</h3>
   <table class="stack"><thead><tr><th>field</th><th>filled from (first match wins)</th><th>red hint means</th></tr></thead><tbody>
     <tr><td>name</td><td>what you saved this project as last time → project name if it's already in your format → Project Info title → .flp file name with junk removed (<code>_2</code>, <code>140bpm</code>, <code>(autosave)</code>)</td><td>FL's auto-name like <code>Project_23</code>. It's pre-selected, so just type over it.</td></tr>
-    <tr><td>bpm</td><td>the saved project's tempo</td><td>no tempo saved (FL default 140), couldn't read it, or the project's older than the export</td></tr>
-    <tr><td>key</td><td>what you used last time for this project → detected from the audio. Top 3 as chips, <b>▾</b> lists all 24 keys.</td><td>the detector's unsure. Check it.</td></tr>
+    <tr><td>bpm</td><td>the saved project's tempo → the file name → estimated from the audio. <b>check against audio</b> adds the audio's top 3 as chips.</td><td>no tempo saved (FL default 140), couldn't read it, or the project's older than the export</td></tr>
+    <tr><td>key</td><td>Ableton only: the set's scale (see <a href="#ableton-read">above</a>) → what you used last time for this project → detected from the audio. Top 3 as chips, <b>▾</b> lists all 24 keys.</td><td>the detector's unsure. Check it.</td></tr>
     <tr><td>version</td><td>highest existing version of that beat in your beats folder + 1. Recalculates if you change the name.</td><td>-</td></tr>
   </tbody></table>
   <p>Once you've saved a beat, its name and key are remembered for that project, so the next export of it is usually one <kbd>Enter</kbd>.</p>
@@ -244,11 +271,12 @@ footer{border-top:1px solid var(--line);margin-top:56px;padding-top:16px;color:v
   <h2 id="sorter">beat sorter (old exports)</h2>
   <p>For everything you exported <i>before</i> installing this: random names, no project folder, BPM and key unknown. Same popup, same naming and folders, but it works everything out from the audio itself.</p>
   <div class="pair">
-    <figure><img class="shot" src="img/sorter.png" width="600" height="560" alt="Beat Sorter window with a large drop zone, a recent list of sorted files and the destination folder in the footer"><figcaption>the drop window</figcaption></figure>
+    <figure><img class="shot" src="img/sorter.png" width="600" height="560" alt="Beat Sorter window with FL Studio / Ableton tabs, a large drop zone, a recent list of sorted files and the destination folder in the footer"><figcaption>the drop window</figcaption></figure>
     <figure><img class="shot" src="img/sorter-popup.png" width="580" height="558" alt="Beat Sorter popup for 'dark trap 140 bpm Am final (1).wav': name cleaned to dark trap, BPM 140 from the file name with estimates 140, 93.5 and 70, key Am from the file name"><figcaption>an old file: name cleaned up, bpm + key read from the file name, audio estimates beside them</figcaption></figure>
   </div>
   <h3 id="sorter-use">using it</h3>
   <ul>
+    <li>Pick <b>FL STUDIO</b> or <b>ABLETON</b> at the top. That decides which beats folder your drops are filed into, and the window's colours. <b>set as default</b> makes it open on that tab next time.</li>
     <li>Open it from the desktop shortcut, the Start menu, or tray → <b>Open Beat Sorter</b>.</li>
     <li>Drop files <i>or whole folders</i> onto the window, or straight onto the desktop shortcut. Subfolders are included. Click the drop zone to browse instead.</li>
     <li>Each beat gets the popup. <b>BPM</b> is estimated from the audio with the top 3 as chips. The half/double-time option (70 vs 140) is always one of them.</li>
@@ -267,7 +295,7 @@ footer{border-top:1px solid var(--line);margin-top:56px;padding-top:16px;color:v
   <h2 id="tray">tray menu</h2>
   <p>Right-click the orange bars icon:</p>
   <table><thead><tr><th>item</th><th>does</th></tr></thead><tbody>
-    <tr><td>open beats folder</td><td>opens your beats folder (also what a left-click does)</td></tr>
+    <tr><td>open FL studio / ableton beats folder</td><td>opens that program's beats folder. Your default program's comes first and is what a left-click opens. The other one only shows while it's being watched.</td></tr>
     <tr><td>open beat sorter</td><td>opens the drop window</td></tr>
     <tr><td>undo last rename</td><td>moves the last saved file(s) back where they were</td></tr>
     <tr><td>pause watching</td><td>exports are left alone until you untick it</td></tr>
@@ -277,10 +305,13 @@ footer{border-top:1px solid var(--line);margin-top:56px;padding-top:16px;color:v
   </tbody></table>
 
   <h2 id="settings">settings</h2>
-  <figure style="margin:12px 0"><img class="shot" src="img/settings.png" width="702" height="660" alt="Settings window: watch and beats folders, name format with example, key style, accidentals, default move or copy, toggles for subfolder per beat, date on beat folders, key detection and update checks, ignored subfolders, and the theme row set to Match FL Studio"></figure>
+  <figure style="margin:12px 0"><img class="shot" src="img/settings.png" width="702" height="785" alt="Settings window on the FL Studio tab: program tabs with 'opens first', watch and beats folders, watch toggle, ignored subfolders and the theme row, then the settings shared by both programs: name format with example, key style, accidentals, default move or copy and toggles"></figure>
+  <h3 id="tabs">FL studio / ableton tabs</h3>
+  <p>The top of settings has a tab per program. The top half of the window (folders, watch toggle, ignore list, theme) belongs to the tab you're on, so FL and Ableton keep separate folders. Everything under <b>both programs</b> is shared. Switching tabs recolours the window in that program's theme and keeps anything you've typed but not saved yet. <b>set as default</b> picks the tab that settings and Beat Sorter open on (it shows <b>★ opens first</b> on the current default).</p>
   <table class="stack"><thead><tr><th>setting</th><th>what it does</th></tr></thead><tbody>
-    <tr><td>watch folder</td><td>FL projects root. Changing it restarts watching straight away.</td></tr>
-    <tr><td>beats folder</td><td>where named exports go</td></tr>
+    <tr><td>watch folder</td><td>that program's projects root. Changing it restarts watching straight away.</td></tr>
+    <tr><td>beats folder</td><td>where that program's named exports go</td></tr>
+    <tr><td>watch for … exports</td><td>on/off per program. Both can be on at once.</td></tr>
     <tr><td>name format</td><td>file name pattern, see <a href="#format">name format</a>. Live example underneath.</td></tr>
     <tr><td>key style</td><td><code>Fm / F</code> or <code>Fmin / Fmaj</code></td></tr>
     <tr><td>accidentals</td><td>mixed (<code>C# Eb F# Ab Bb</code>, the usual producer mix), all sharps, or all flats</td></tr>
@@ -290,18 +321,19 @@ footer{border-top:1px solid var(--line);margin-top:56px;padding-top:16px;color:v
     <tr><td>detect key from audio</td><td>off = key box starts empty unless remembered</td></tr>
     <tr><td>check for updates</td><td>once a day, asks GitHub if there's a newer version and shows a toast if so. Nothing else is sent.</td></tr>
     <tr><td>start with windows</td><td>launches the watcher at login</td></tr>
-    <tr><td>ignore</td><td>subfolder names that never trigger a popup, comma-separated</td></tr>
-    <tr><td>theme</td><td>the app's colours. See <a href="#theme">colours + FL theme</a>.</td></tr>
+    <tr><td>ignore</td><td>subfolder names that never trigger a popup, comma-separated (per program)</td></tr>
+    <tr><td>theme</td><td>that program's colours. See <a href="#theme">colours + FL / ableton theme</a>.</td></tr>
   </tbody></table>
   <p>Your version number is shown bottom-left of the settings window.</p>
-  <h3 id="theme">colours + FL theme</h3>
-  <p>Out of the box the app wears FL Studio's stock look: blue-grey panels and the orange highlight. If you've re-skinned FL, the app can follow your theme instead. Pick one under <b>theme</b> in settings:</p>
+  <h3 id="theme">colours + FL / ableton theme</h3>
+  <p>Out of the box the app wears FL Studio's stock look: blue-grey panels and the orange highlight. Ableton exports, and the Ableton tabs, use Live's own neutral grey look. If you've re-skinned FL or Live, the app can follow your theme instead. Each program has its own <b>theme</b> row in settings (on its tab); the FL options are:</p>
   <table class="stack"><thead><tr><th>option</th><th>what it does</th></tr></thead><tbody>
     <tr><td>match FL studio</td><td>the default. Follows the theme FL is using, automatically. FL saves its current theme when it closes, so after you change themes the app catches up within a few seconds of you closing FL.</td></tr>
     <tr><td>FL default</td><td>always the stock FL look, whatever FL is set to.</td></tr>
     <tr><td>theme file</td><td><b>LOAD .FLSTHEME…</b> and pick any FL theme file, e.g. one you downloaded. Your own saved themes are in <code>Documents\Image-Line\FL Studio\Settings\Themes</code>.</td></tr>
     <tr><td>custom</td><td><b>EDIT COLOURS…</b> and set the five colours yourself (below).</td></tr>
   </tbody></table>
+  <p>On the Ableton tab it's the same idea: <b>match ableton</b> finds the theme Live is using (Live notes it in its preferences when it closes, so the app catches up a few seconds after you close Live), <b>ableton default</b>, <b>theme file</b> with <b>LOAD .ASK…</b> for any Live <code>.ask</code> theme, or <b>custom</b>. If the app can't tell which theme Live uses, the status line says so: load the theme's <code>.ask</code> file from Live's <code>Resources\Themes</code> folder instead.</p>
   <p>The little swatches under the buttons preview the result. The line beside them says where the colours came from, or why it fell back to FL default (no FL theme found, unreadable file). Hit <b>SAVE</b> to apply. Beat Sorter's window recolours straight away. Popups use the new colours from the next one.</p>
   <div class="pair">
     <figure><img class="shot" src="img/theme-colours.png" width="470" height="485" alt="Theme colours window: background, title bars, boxes and buttons, accent and text, each with a swatch, a hex code box and a PICK button, above a live preview of a name box with save and skip buttons"><figcaption>edit colours</figcaption></figure>
@@ -310,7 +342,7 @@ footer{border-top:1px solid var(--line);margin-top:56px;padding-top:16px;color:v
       <ul>
         <li>click a swatch for a colour picker, or type a hex code like <code>#f7a13d</code></li>
         <li><b>PICK</b> is an eyedropper. Have FL Studio open behind, click PICK, then click the matching spot in FL, e.g. the playlist background or a lit button. A magnifier shows the exact pixel. <kbd>Esc</kbd> cancels.</li>
-        <li><b>reset to FL default</b> puts the stock colours back</li>
+        <li><b>reset to FL default</b> (or <b>ableton default</b>) puts the stock colours back</li>
       </ul>
     </div>
   </div>
@@ -367,6 +399,13 @@ footer{border-top:1px solid var(--line);margin-top:56px;padding-top:16px;color:v
 
   <h2 id="changelog">changelog</h2>
   <p>Every version's notes are on the <a href="https://github.com/jlnorge/fl-export-namer/releases">releases page</a> (full history in <a href="https://github.com/jlnorge/fl-export-namer/blob/main/CHANGELOG.md">CHANGELOG.md</a>). Latest:</p>
+  <h3>1.4.0 · 24.11.26</h3>
+  <ul>
+    <li><b>Ableton Live support.</b> Watches your Live projects folder too, alone or alongside FL Studio. BPM and key come from the set (tempo + Live's scale), with the audio estimate as a fallback and as one-click alternatives. See <a href="#ableton">ableton live</a>.</li>
+    <li>FL STUDIO / ABLETON tabs in settings and Beat Sorter, each with its own folders and theme, plus <b>set as default</b> for the tab that opens first.</li>
+    <li>The app can match your Ableton theme, like it does for FL.</li>
+    <li>No tempo in the project or file name? BPM is now estimated from the audio instead of left blank. <b>check against audio</b> gets a second opinion any time.</li>
+  </ul>
   <h3>1.3.1 · 24.11.26</h3>
   <ul>
     <li>The project moved to <a href="https://github.com/jlnorge/fl-export-namer">github.com/jlnorge/fl-export-namer</a>. Update checks and links follow it; this guide now lives at <a href="https://jlnorge.github.io/fl-export-namer/">jlnorge.github.io/fl-export-namer</a>.</li>
