@@ -1,4 +1,4 @@
-# FL Export Namer - project brief for Claude
+# DAW Export Fixer - project brief for Claude
 
 Windows tray app for FL Studio and Ableton Live producers (owner: Jay). Watches the FL and/or
 Ableton projects folders; when a render lands it shows a popup themed like the program it came
@@ -17,8 +17,8 @@ old exports by estimating BPM + key from the audio. Shared with friends as a PyI
 | `als_reader.py` | streaming .als (gzip XML) parser: tempo (`MainTrack`/`MasterTrack` Tempo/Manual), key from Live 12 Scale (`InKey`), in-key clip scales, or a non-default set scale |
 | `key_detect.py` / `bpm_detect.py` | numpy-only key + tempo estimation |
 | `launcher.py` | packaged entry point: default = watcher, `--sorter`, `--selftest` |
-| `fl_export_namer.pyw`, `beat_sorter.pyw` | thin entry points for running from source |
-| `build_kit/` | `build.bat` (venv -> PyInstaller -> selftest -> zip -> Inno Setup), `FLExportNamer.spec`, `installer.iss`, `icon.ico` |
+| `daw_export_fixer.pyw`, `beat_sorter.pyw` | thin entry points for running from source |
+| `build_kit/` | `build.bat` (venv -> PyInstaller -> selftest -> zip -> Inno Setup), `DAWExportFixer.spec`, `installer.iss`, `icon.ico` |
 | `docs/` | the user guide (`index.html` + `img/`), published to GitHub Pages on merge to `main` |
 | `tests/` | pytest suite (naming, .flp reader, detection, folders, update check) |
 | `tools/release_notes.py` | pulls a version's section out of `CHANGELOG.md` for the release page |
@@ -26,11 +26,11 @@ old exports by estimating BPM + key from the audio. Shared with friends as a PyI
 | `requirements.txt` / `requirements-dev.txt` | pinned runtime / build+test dependencies |
 
 ## Run / test / build (Windows)
-- From source: `py fl_export_namer.pyw` (watcher), `py beat_sorter.pyw`, `py fl_export_namer.pyw --demo` (popup with sample data, add `--ableton` for the Ableton one), `py fl_export_namer.pyw --test "C:\path\render.wav"`.
-- Self-test: `py launcher.py --selftest` -> writes `%APPDATA%\FL Export Namer\selftest.txt`.
+- From source: `py daw_export_fixer.pyw` (watcher), `py beat_sorter.pyw`, `py daw_export_fixer.pyw --demo` (popup with sample data, add `--ableton` for the Ableton one), `py daw_export_fixer.pyw --test "C:\path\render.wav"`.
+- Self-test: `py launcher.py --selftest` -> writes `%APPDATA%\DAW Export Fixer\selftest.txt`.
 - Tests: `py -m pytest tests` (needs `requirements-dev.txt`).
 - Local build: double-click `build_kit\build.bat`. Output in `dist\`. Real releases come from the `release` workflow.
-- Settings/state/log: `%APPDATA%\FL Export Namer\` (`config.json`, `state.json`, `log.txt`).
+- Settings/state/log: `%APPDATA%\DAW Export Fixer\` (`config.json`, `state.json`, `log.txt`).
 
 ## How work flows (GitHub)
 - Never commit straight to `main`. Make a branch (`feature/stems-zip`, `fix/bpm-amber`), commit, open a
@@ -42,6 +42,9 @@ old exports by estimating BPM + key from the audio. Shared with friends as a PyI
   runs the selftest on the built exe, and publishes Setup.exe + zip + SHA256SUMS with notes from
   the changelog. The app's update check reads that release.
 - `UPDATE_REPO` in `namer_core.py` must stay the real `owner/repo`.
+- Renamed from FL Export Namer in 1.5.0. Keep the installer's `AppId` (upgrades depend on it), and keep
+  `migrate_old_name()` (copies `%APPDATA%\FL Export Namer`, moves the startup entry) plus the installer's
+  old-name cleanup for a few releases so people upgrading from 1.4.x keep their setup.
 
 ## Rules for changes
 - Two programs (`DAWS = ("fl", "ableton")`). Per-program settings are listed in `PER_DAW`: FL keeps the

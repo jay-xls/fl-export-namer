@@ -1,14 +1,14 @@
-# FL Export Namer
+# DAW Export Fixer
 
 **Export a beat from FL Studio or Ableton Live, hit Enter, done.** A small Windows app that watches your FL Studio
 and/or Ableton projects folders. When you export, it pops up with the name, BPM, key and next version number
 already filled in, then renames the file and files it into one tidy beats folder. Comes with
 **Beat Sorter** for your back catalogue: drop old, randomly named exports in and it works out the
-BPM and key from the audio.
+BPM and key from the audio. *(Formerly FL Export Namer.)*
 
 <img src="docs/img/popup.png" width="520" alt="The popup that appears after exporting: name, BPM read from the project, detected key with alternatives, version, and the final file name">
 
-### [⬇ Download the latest version](https://github.com/jlnorge/fl-export-namer/releases/latest) · [📖 User guide](https://jlnorge.github.io/fl-export-namer/)
+### [⬇ Download the latest version](https://github.com/jlnorge/daw-export-fixer/releases/latest) · [📖 User guide](https://jlnorge.github.io/daw-export-fixer/)
 
 Windows 10/11 · free · no Python needed. Windows will say the app is from an unknown publisher
 (it isn't code-signed) - click **More info → Run anyway**.
@@ -27,7 +27,7 @@ Windows 10/11 · free · no Python needed. Windows will say the app is from an u
 - **Update notices** - tells you when a new version is out
 
 ## Found a bug / got an idea?
-[Open an issue](https://github.com/jlnorge/fl-export-namer/issues/new/choose) - attach your log
+[Open an issue](https://github.com/jlnorge/daw-export-fixer/issues/new/choose) - attach your log
 (tray icon → **Open log**) for bugs.
 
 ---
@@ -36,7 +36,7 @@ Windows 10/11 · free · no Python needed. Windows will say the app is from an u
 
 | | |
 |---|---|
-| Run from source | `py -m pip install -r requirements.txt` then `py fl_export_namer.pyw` (watcher) / `py beat_sorter.pyw` / `py fl_export_namer.pyw --demo` |
+| Run from source | `py -m pip install -r requirements.txt` then `py daw_export_fixer.pyw` (watcher) / `py beat_sorter.pyw` / `py daw_export_fixer.pyw --demo` |
 | Tests | `py -m pip install -r requirements-dev.txt` then `py -m pytest tests` |
 | Local build | double-click `build_kit\build.bat` → `dist\` |
 | Release | add a `CHANGELOG.md` section, bump `__version__` in `namer_core.py`, merge to `main`, then **Actions → release → Run workflow** |

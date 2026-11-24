@@ -4,6 +4,11 @@ Every release gets a section here **before** it's built - the release workflow
 uses it as the release notes and refuses to run without one.
 Versions: `MAJOR.MINOR.PATCH` - bug fix = patch, new feature = minor.
 
+## [1.5.0] - 2026-11-24
+### Changed
+- New name: **FL Export Namer is now DAW Export Fixer**, since it works with Ableton Live too. The project lives at github.com/jlnorge/daw-export-fixer and the guide at jlnorge.github.io/daw-export-fixer.
+- Upgrading keeps everything: settings and per-project memory are copied from `%APPDATA%\FL Export Namer` (left in place as a backup), "Start with Windows" carries over, and Setup replaces the old install, its Start menu entries and its startup entry.
+
 ## [1.4.1] - 2026-11-24
 ### Fixed
 - The app crashed on launch ("'App' object has no attribute 'tray'") when your FL Studio or Ableton theme differs from the stock look.

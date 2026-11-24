@@ -2,7 +2,7 @@
 setlocal
 cd /d "%~dp0"
 echo.
-echo  == FL Export Namer setup ==
+echo  == DAW Export Fixer setup ==
 echo.
 
 where py >nul 2>nul
@@ -25,9 +25,9 @@ if errorlevel 1 (
 
 echo  Adding it to Windows startup...
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-  "$s=(New-Object -ComObject WScript.Shell).CreateShortcut([Environment]::GetFolderPath('Startup')+'\FL Export Namer.lnk');" ^
+  "$s=(New-Object -ComObject WScript.Shell).CreateShortcut([Environment]::GetFolderPath('Startup')+'\DAW Export Fixer.lnk');" ^
   "$s.TargetPath=(Get-Command pyw).Source;" ^
-  "$s.Arguments=[char]34+'%~dp0fl_export_namer.pyw'+[char]34;" ^
+  "$s.Arguments=[char]34+'%~dp0daw_export_fixer.pyw'+[char]34;" ^
   "$s.WorkingDirectory='%~dp0';" ^
   "$s.Save()"
 
@@ -41,7 +41,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command ^
   "$s.Save()"
 
 echo  Starting it now - a setup window will pop up the first time.
-start "" pyw "%~dp0fl_export_namer.pyw"
+start "" pyw "%~dp0daw_export_fixer.pyw"
 echo.
 echo  Done. It lives in the system tray (the red bars icon - check the ^^ overflow menu).
 echo.

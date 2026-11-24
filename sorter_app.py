@@ -1,5 +1,5 @@
 """Beat Sorter (importable module) - drop old exports in, get BPM + key estimates from the audio,
-confirm in the same popup as FL Export Namer, and file them into FL Export.
+confirm in the same popup as DAW Export Fixer, and file them into FL Export.
 
 No FL project needed. Run:
     pyw beat_sorter.pyw                      (opens the drop window)
@@ -23,7 +23,7 @@ import naming  # noqa: E402
 import theme  # noqa: E402
 from namer_core import (APPDIR, AUDIO_EXTS, CONFIG_PATH, DAW_NAMES, DAWS, DETECTABLE, FROZEN,  # noqa: E402
                         LOG_PATH, App, C, Job, Segmented, SettingsWindow, Toggle, __version__, daw_cfg,
-                        label, logo_image, save_json, short)
+                        label, logo_image, migrate_old_name, save_json, short)
 
 PORT = 47614
 MAX_RECENT = 7
@@ -361,6 +361,7 @@ class SorterApp(App):
 
 
 def main():
+    migrate_old_name()
     APPDIR.mkdir(parents=True, exist_ok=True)
     logging.basicConfig(filename=LOG_PATH, level=logging.INFO, format="%(asctime)s %(levelname)s [sorter] %(message)s")
     logging.info("Beat Sorter v%s starting", __version__)

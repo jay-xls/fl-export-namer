@@ -34,5 +34,5 @@ jobs:
         run: |
           python launcher.py --selftest
           $code = $LASTEXITCODE
-          Get-Content "$env:APPDATA\FL Export Namer\selftest.txt"
+          Get-Content "$env:APPDATA\DAW Export Fixer\selftest.txt"
           exit $code

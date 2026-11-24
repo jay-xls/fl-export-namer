@@ -56,17 +56,17 @@ jobs:
         run: python -m pytest -q tests
 
       - name: Build with PyInstaller
-        run: python -m PyInstaller --noconfirm --clean --workpath build/pyi --distpath dist build_kit/FLExportNamer.spec
+        run: python -m PyInstaller --noconfirm --clean --workpath build/pyi --distpath dist build_kit/DAWExportFixer.spec
 
       - name: Selftest the built exe
         shell: pwsh
         run: |
-          $p = Start-Process -FilePath "dist\FL Export Namer\FL Export Namer.exe" -ArgumentList "--selftest" -Wait -PassThru
-          Get-Content "$env:APPDATA\FL Export Namer\selftest.txt"
+          $p = Start-Process -FilePath "dist\DAW Export Fixer\DAW Export Fixer.exe" -ArgumentList "--selftest" -Wait -PassThru
+          Get-Content "$env:APPDATA\DAW Export Fixer\selftest.txt"
           if ($p.ExitCode -ne 0) { throw "selftest failed" }
 
       - name: Zip
-        run: python -m zipfile -c "dist/FL Export Namer ${{ env.VERSION }}.zip" "dist/FL Export Namer"
+        run: python -m zipfile -c "dist/DAW Export Fixer ${{ env.VERSION }}.zip" "dist/DAW Export Fixer"
 
       - name: Installer (Inno Setup)
         shell: pwsh
@@ -90,4 +90,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $files = Get-ChildItem dist -File | Where-Object { $_.Extension -in ".exe", ".zip", ".txt" } | ForEach-Object { $_.FullName }
-          gh release create "v${{ env.VERSION }}" @files --title "FL Export Namer ${{ env.VERSION }}" --notes-file notes.md --target "${{ github.sha }}"
+          gh release create "v${{ env.VERSION }}" @files --title "DAW Export Fixer ${{ env.VERSION }}" --notes-file notes.md --target "${{ github.sha }}"
