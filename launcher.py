@@ -56,11 +56,27 @@ def selftest() -> int:
     check("folder watching", lambda: __import__("watchdog.observers", fromlist=["Observer"]).Observer.__name__)
     check("project reader", lambda: __import__("flp_reader").read_flp.__name__)
 
+    def ableton():
+        import gzip
+        from als_reader import read_als
+        p = Path(tempfile.gettempdir()) / "fl_export_namer_selftest.als"
+        p.write_bytes(gzip.compress(b'<?xml version="1.0"?><Ableton Creator="Ableton Live 12.1"><LiveSet>'
+                                    b'<MainTrack><DeviceChain><Mixer><Tempo><Manual Value="128"/></Tempo></Mixer>'
+                                    b'</DeviceChain></MainTrack></LiveSet></Ableton>'))
+        info = read_als(p)
+        p.unlink()
+        if info.tempo != 128:
+            raise ValueError(f"read tempo {info.tempo}")
+        return f"Live {info.live_version} set, tempo {info.tempo}"
+    check("Ableton set reader", ableton)
+
     def themes():
         import theme
         from PIL import ImageGrab, ImageTk  # eyedropper
         pal, status, _ = theme.resolve({"theme": "auto"})
-        return f"{status}, accent {pal['accent']}, {ImageGrab.__name__}, {ImageTk.__name__}"
+        apal, astatus, _ = theme.resolve({"theme": "auto", "daw": "ableton"})
+        return (f"{status}, accent {pal['accent']}; Ableton: {astatus}, accent {apal['accent']}; "
+                f"{ImageGrab.__name__}, {ImageTk.__name__}")
     check("themes + eyedropper", themes)
     namer_core.APPDIR.mkdir(parents=True, exist_ok=True)
     (namer_core.APPDIR / "selftest.txt").write_text("\n".join(out) + "\n" + ("ALL OK" if ok else "FAILED") + "\n",

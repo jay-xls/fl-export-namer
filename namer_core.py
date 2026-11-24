@@ -1,7 +1,8 @@
 """Shared core for FL Export Namer (watcher) and Beat Sorter (drop files).
 
-FL Export Namer - watches FL Studio renders, fills in BPM / key / version,
-lets you confirm in an FL-styled popup, then renames and files the export.
+FL Export Namer - watches FL Studio and Ableton Live renders, fills in BPM / key / version,
+lets you confirm in a popup styled like the program the export came from, then renames
+and files the export.
 
 Run:  pyw fl_export_namer.pyw          (normal, sits in the system tray)
       py  fl_export_namer.pyw --demo   (shows the popup with sample data)
@@ -31,12 +32,13 @@ sys.path.insert(0, str(HERE))
 import tkinter as tk  # noqa: E402
 from tkinter import filedialog, font as tkfont  # noqa: E402
 
+from als_reader import AlsInfo, read_als  # noqa: E402
 from flp_reader import FlpInfo, read_flp  # noqa: E402
 import naming  # noqa: E402
 import theme  # noqa: E402
 
 APP = "FL Export Namer"
-__version__ = "1.3.1"
+__version__ = "1.4.0"
 # GitHub repo releases are published to (owner/name). Used by the update check.
 UPDATE_REPO = "jlnorge/fl-export-namer"
 FROZEN = getattr(sys, "frozen", False)  # running from the PyInstaller build
@@ -48,10 +50,24 @@ LOG_PATH = APPDIR / "log.txt"
 AUDIO_EXTS = {".wav", ".mp3", ".flac", ".ogg", ".m4a", ".aif", ".aiff"}
 DETECTABLE = [".wav", ".flac", ".aif", ".aiff", ".ogg", ".mp3"]
 
+# The two programs the app works with. Each has its own folders, ignore list and theme.
+DAWS = ("fl", "ableton")
+DAW_NAMES = {"fl": "FL Studio", "ableton": "Ableton"}
+PROJECT_EXT = {"fl": ".flp", "ableton": ".als"}
+PER_DAW = ("watch_folder", "beats_folder", "ignore_folders", "theme", "theme_file", "theme_colors")
+
+
 def _default_watch() -> str:
     # Jay's layout if it exists, otherwise where FL Studio keeps projects by default.
     mine = Path.home() / "Music" / "FL Projects"
     return str(mine if mine.exists() else Path.home() / "Documents" / "Image-Line" / "FL Studio" / "Projects")
+
+
+def _default_ableton_watch() -> str:
+    # First of these that exists; Live keeps its User Library (and usually projects) in Documents\Ableton.
+    cands = [Path.home() / "Music" / "Ableton Projects", Path.home() / "Music" / "Ableton",
+             theme.documents_dir() / "Ableton"]
+    return str(next((p for p in cands if p.exists()), cands[-1]))
 
 
 DEFAULT_CONFIG = {
@@ -68,13 +84,42 @@ DEFAULT_CONFIG = {
     "detect_key": True,
     "check_updates": True,
     "ignore_folders": ["Backup", "Recorded", "Audio", "Sliced", "Audio Logger", "Autosave", "Samples"],
+    "default_daw": "fl",         # tab Settings / Beat Sorter open on: fl or ableton
+    "watch_fl": True,            # watch the FL Studio folder
+    "watch_ableton": Path(_default_ableton_watch()).exists(),  # watch the Ableton folder
+    "ableton_watch_folder": _default_ableton_watch(),
+    "ableton_beats_folder": str(Path.home() / "Music" / "Ableton Export"),
+    "ableton_ignore_folders": ["Backup", "Samples", "Ableton Project Info", "User Library", "Factory Packs",
+                               "Live Recordings", "Recorded", "Processed"],
     "settle_seconds": 1.5,
     "group_seconds": 3.0,
     "stale_warning_minutes": 2,
     "theme": "auto",             # auto = match FL Studio's current theme, default, file, custom
     "theme_file": "",            # .flstheme used when theme = file
     "theme_colors": {},          # seed colours used when theme = custom (see theme.SEEDS)
+    "ableton_theme": "auto",     # same choices, for the Ableton side (auto = match Live's theme)
+    "ableton_theme_file": "",    # .ask used when ableton_theme = file
+    "ableton_theme_colors": {},
 }
+
+
+def daw_key(daw: str, key: str) -> str:
+    """Config key holding `key` for a program: FL keeps the original names, Ableton's are prefixed."""
+    return key if daw == "fl" or key not in PER_DAW else f"{daw}_{key}"
+
+
+def daw_cfg(cfg: dict, daw: str) -> dict:
+    """A copy of cfg as one program sees it: watch_folder, beats_folder, theme... are that
+    program's, and cfg["daw"] says which one it is."""
+    out = dict(cfg)
+    for k in PER_DAW:
+        out[k] = cfg.get(daw_key(daw, k), DEFAULT_CONFIG[daw_key(daw, k)])
+    out["daw"] = daw
+    return out
+
+
+def watch_enabled(cfg: dict, daw: str) -> bool:
+    return bool(cfg.get(f"watch_{daw}", DEFAULT_CONFIG[f"watch_{daw}"]))
 
 # ---------------------------------------------------------------- theme ----
 # Live palette. Starts as FL Studio's stock look; App.apply_theme() swaps the values in
@@ -253,8 +298,12 @@ class Job:
     files: list[Path]
     kind: str = "single"               # single (1+ formats of one render) | stems
     stem_suffixes: dict = field(default_factory=dict)
-    flp: Path | None = None
+    daw: str = "fl"                    # program the export came from: fl | ableton
+    project: Path | None = None        # the .flp / .als that made it
     flp_info: FlpInfo | None = None
+    als_info: AlsInfo | None = None
+    als_key: str = ""                  # key the Ableton set suggests (kept so a user override sticks)
+    bpm_trusted: bool = False          # BPM came from the project itself
     project_key: str = ""
     name: str = ""
     name_source: str = ""
@@ -270,12 +319,13 @@ class Job:
     standalone: bool = False
 
 
-def find_project(files: list[Path], watch_root: Path):
-    """Locate the .flp that produced these renders (same folder, or up to 2 parents)."""
+def find_project(files: list[Path], watch_root: Path, ext: str = ".flp"):
+    """Locate the project (.flp / .als) that produced these renders (same folder, or up to 2 parents).
+    Returns (main project file, newest save of it)."""
     folder = files[0].parent
     export_clean = naming.clean_project_name(files[0].stem).lower()
     for _ in range(3):
-        flps = [p for p in folder.glob("*.flp")]
+        flps = [p for p in folder.glob("*" + ext)]
         if flps:
             groups: dict[str, list[Path]] = {}
             for p in flps:
@@ -291,13 +341,42 @@ def find_project(files: list[Path], watch_root: Path):
         if folder == watch_root or folder.parent == folder:
             break
         folder = folder.parent
+    if ext == ".als":  # exported somewhere else: Live's "<Set> Project\<Set>.als" under the watch folder
+        stem = naming.clean_project_name(files[0].stem)
+        p = watch_root / f"{stem} Project" / f"{stem}.als"
+        if p.is_file():
+            return p, p
     return None, None
 
 
+def project_daw_near(folder: Path, stop: Path | None = None) -> str | None:
+    """'ableton' / 'fl' if an .als / .flp sits in folder or up to 2 parents, else None."""
+    for _ in range(3):
+        try:
+            exts = {p.suffix.lower() for p in folder.iterdir() if p.is_file()}
+        except OSError:
+            exts = set()
+        if ".als" in exts:
+            return "ableton"
+        if ".flp" in exts:
+            return "fl"
+        if folder == stop or folder.parent == folder:
+            break
+        folder = folder.parent
+    return None
+
+
+ALS_KEY_SOURCES = {"scale": "from Live's Scale setting", "clips": "from the set's clip scales",
+                   "set": "from the set's scale"}
+
+
 def build_job(files: list[Path], cfg: dict, state: dict) -> Job:
+    """cfg as daw_cfg() returns it: cfg["daw"] says which program the export came from."""
+    daw = cfg.get("daw", "fl")
     files = sorted(files, key=lambda p: (p.suffix.lower() != ".wav", p.name.lower()))
-    job = Job(files=files)
+    job = Job(files=files, daw=daw)
     tmpl = cfg["template"]
+    ext = PROJECT_EXT[daw]
 
     stems = sorted({f.stem for f in files})
     if len(stems) > 1:
@@ -310,23 +389,25 @@ def build_job(files: list[Path], cfg: dict, state: dict) -> Job:
     else:
         export_stem = stems[0]
 
-    main, newest = find_project(files, Path(cfg["watch_folder"]))
+    main, newest = find_project(files, Path(cfg["watch_folder"]), ext)
     remembered = {}
     if main:
-        job.flp = main
+        job.project = main
         job.project_key = str(main.parent / naming.clean_project_name(main.stem)).lower()
         remembered = state.get("projects", {}).get(job.project_key, {})
         try:
-            job.flp_info = read_flp(newest)
+            if daw == "ableton":
+                job.als_info = read_als(newest)
+            else:
+                job.flp_info = read_flp(newest)
         except Exception as e:
             logging.warning("could not read %s: %s", newest, e)
-            job.flp_info = None
         age = files[0].stat().st_mtime - newest.stat().st_mtime
         if age > cfg["stale_warning_minutes"] * 60:
             job.warnings.append(
                 f"Project last saved {ago(age)} before this export - if you changed tempo since, check the BPM.")
     else:
-        job.warnings.append("No .flp found next to this export - BPM can't be read.")
+        job.warnings.append(f"No {ext} found next to this export - BPM and key will be estimated from the audio.")
 
     parsed_flp = naming.parse_stem(tmpl, main.stem) if main else None
     parsed_exp = naming.parse_stem(tmpl, export_stem)
@@ -341,28 +422,45 @@ def build_job(files: list[Path], cfg: dict, state: dict) -> Job:
         job.name, job.name_source = title, "from Project Info title"
     elif main:
         job.name = naming.clean_project_name(main.stem)
-        job.name_source = ("unnamed FL project - give it a name" if naming.is_generic(job.name)
+        job.name_source = (f"unnamed {DAW_NAMES[daw]} project - give it a name" if naming.is_generic(job.name)
                            else "from project name")
     else:
         job.name, job.name_source = naming.clean_project_name(export_stem), "from export name"
 
-    # BPM
-    info = job.flp_info
-    if info and info.tempo:
-        job.bpm = naming.fmt_bpm(info.tempo)
+    # BPM: the project's tempo, else the file name, else an estimate from the audio
+    fi, ai = job.flp_info, job.als_info
+    if fi and fi.tempo:
+        job.bpm = naming.fmt_bpm(fi.tempo)
+        job.bpm_trusted = fi.tempo_source in ("project", "legacy")
         job.bpm_source = {"project": "read from project", "legacy": "read from project",
-                          "default": "FL default (no tempo saved in project)"}.get(info.tempo_source, "")
+                          "default": "FL default (no tempo saved in project)"}.get(fi.tempo_source, "")
+    elif ai and ai.tempo:
+        job.bpm, job.bpm_source, job.bpm_trusted = naming.fmt_bpm(ai.tempo), "read from Ableton set", True
     elif parsed_exp and parsed_exp.get("bpm"):
         job.bpm, job.bpm_source = parsed_exp["bpm"], "from file name"
     else:
-        job.bpm_source = "couldn't read - type it in"
+        job.bpm_source, job.detect_bpm = "estimating from audio…", True
 
-    # Key
-    for src, d in (("remembered for this project", remembered),
-                   ("from project name", parsed_flp or {}), ("from file name", parsed_exp or {})):
-        if d.get("key"):
-            job.key, job.key_source = d["key"], src
-            break
+    # Key: Ableton's scale (unless you changed it for this project), else remembered / names.
+    # The audio estimate always runs too and is offered as chips.
+    if ai and ai.root is not None:
+        from key_detect import key_name
+        job.als_key = key_name(ai.root, ai.minor, cfg["key_style"], cfg["accidentals"])
+    if job.als_key:
+        mine = remembered.get("key")
+        if mine and remembered.get("als_key") == job.als_key and mine != job.als_key:
+            job.key, job.key_source = mine, f"your choice for this project (Live says {job.als_key})"
+        else:
+            plain = ai.scale_name.lower() in ("major", "minor")
+            job.key = job.als_key
+            job.key_source = ALS_KEY_SOURCES.get(ai.key_source, "from Ableton set") + (
+                "" if plain else f" ({ai.scale_name})")
+    else:
+        for src, d in (("remembered for this project", remembered),
+                       ("from project name", parsed_flp or {}), ("from file name", parsed_exp or {})):
+            if d.get("key"):
+                job.key, job.key_source = d["key"], src
+                break
 
     if job.kind == "single":
         by_ext = {f.suffix.lower(): f for f in files}
@@ -405,22 +503,27 @@ def dest_dir(cfg, name: str, when: float | None = None) -> Path:
 
 # --------------------------------------------------------------- watcher ----
 class ExportWatcher:
-    """Turns raw filesystem events into finished, grouped render jobs."""
+    """Turns raw filesystem events in one program's watch folder into finished, grouped render jobs."""
 
-    def __init__(self, app):
-        self.app = app
+    def __init__(self, app, daw: str = "fl"):
+        self.app, self.daw = app, daw
         self.pending: dict[str, list] = {}   # path -> [first_seen, size, mtime, last_change]
         self.ready: dict[str, list] = {}     # folder -> [paths]
         self.ready_t: dict[str, float] = {}
-        self.own_outputs: set[str] = set()
+        self.own_outputs: set[str] = getattr(app, "own_outputs", set())  # shared by all watchers
         self.logged_skips: set[str] = set()
         self.lock = threading.Lock()
         self.observer = None
+        self.root = ""
         self.stop_evt = threading.Event()
+
+    @property
+    def cfg(self) -> dict:
+        return daw_cfg(self.app.cfg, self.daw)
 
     def ignored(self, p: Path) -> str:
         """Empty string = handle it; otherwise the reason it's skipped."""
-        cfg = self.app.cfg
+        cfg = self.cfg
         if p.suffix.lower() not in AUDIO_EXTS:
             return "not audio"
         if p.name.startswith(("~", ".")):
@@ -428,13 +531,29 @@ class ExportWatcher:
         sp = str(p).lower()
         if sp in self.own_outputs:
             return "written by Export Namer"
-        beats = str(Path(cfg["beats_folder"])).lower().rstrip("\\/")
-        if sp.startswith(beats + "\\") or sp.startswith(beats + "/"):
-            return "already in Beats folder"
+        for d in DAWS:
+            beats = str(Path(daw_cfg(self.app.cfg, d)["beats_folder"])).lower().rstrip("\\/")
+            if sp.startswith(beats + "\\") or sp.startswith(beats + "/"):
+                return "already in Beats folder"
         try:
             rel = p.relative_to(cfg["watch_folder"])
         except ValueError:
             return "outside watch folder"
+        # Both programs can watch overlapping folders: the most specific watch folder wins,
+        # and for the same folder the project file next to the export decides.
+        for other in DAWS:
+            if other == self.daw or not watch_enabled(self.app.cfg, other):
+                continue
+            try:
+                orel = p.relative_to(daw_cfg(self.app.cfg, other)["watch_folder"])
+            except ValueError:
+                continue
+            if len(orel.parts) < len(rel.parts):
+                return f"inside the {DAW_NAMES[other]} watch folder"
+            if len(orel.parts) == len(rel.parts):
+                owner = project_daw_near(p.parent, Path(cfg["watch_folder"])) or DAWS[0]
+                if owner != self.daw:
+                    return f"looks like a {DAW_NAMES[owner]} export"
         names = {x.strip().lower() for x in cfg["ignore_folders"] if x.strip()}
         hit = next((part for part in rel.parts[:-1] if part.lower() in names), None)
         if hit:
@@ -480,28 +599,29 @@ class ExportWatcher:
                 if not e.is_directory and e.src_path in outer.pending:
                     outer.on_path(e.src_path)
 
-        root = Path(self.app.cfg["watch_folder"])
+        root = Path(self.cfg["watch_folder"])
         root.mkdir(parents=True, exist_ok=True)
+        self.stop_evt = threading.Event()
         self.observer = Observer()
         self.observer.schedule(H(), str(root), recursive=True)
         self.observer.start()
-        threading.Thread(target=self.loop, daemon=True).start()
-        logging.info("watching %s", root)
+        self.root = str(root)
+        threading.Thread(target=self.loop, args=(self.stop_evt,), daemon=True).start()
+        logging.info("watching %s (%s)", root, DAW_NAMES[self.daw])
 
     def stop(self):
         self.stop_evt.set()
         if self.observer:
             self.observer.stop()
+        self.observer = None
 
     def restart(self):
         self.stop()
-        self.observer = None
-        self.stop_evt = threading.Event()
         self.start()
 
-    def loop(self):
+    def loop(self, stop_evt):
         cfg = self.app.cfg
-        while not self.stop_evt.wait(0.4):
+        while not stop_evt.wait(0.4):
             now = time.time()
             with self.lock:
                 for path, rec in list(self.pending.items()):
@@ -529,7 +649,7 @@ class ExportWatcher:
                         files = [Path(p) for p in dict.fromkeys(self.ready.pop(folder)) if os.path.exists(p)]
                         self.ready_t.pop(folder, None)
                         if files:
-                            self.app.submit_files(files)
+                            self.app.submit_files(files, self.daw)
 
 
 # ------------------------------------------------------------ ui helpers ----
@@ -666,8 +786,9 @@ ALL_KEYS = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"]
 
 class ExportPopup(ThemedWindow):
     def __init__(self, app, job: Job):
-        super().__init__(app, getattr(app, "popup_title", "Export Namer"), 580)
-        self.job, cfg = job, app.cfg
+        super().__init__(app, f"{getattr(app, 'popup_title', 'Export Namer')}  ·  {DAW_NAMES[job.daw]}", 580)
+        self.job = job
+        self.cfg = cfg = daw_cfg(app.cfg, job.daw)  # this program's folders
         b, f = self.body, self.f
         self.user_set_version = False
         self.user_set_key = False
@@ -679,10 +800,12 @@ class ExportPopup(ThemedWindow):
         label(b, f, "FILE" if job.standalone else "EXPORT").grid(row=0, column=0, sticky="w")
         label(b, f, short(src), fg=C["text"], font=f.body).grid(row=0, column=1, columnspan=3, sticky="w")
         proj = "no project found"
-        if job.flp:
-            proj = job.flp.name
+        if job.project:
+            proj = job.project.name
             if job.flp_info and job.flp_info.fl_version:
                 proj += f"   ·   FL {job.flp_info.fl_version.split('.')[0]}"
+            elif job.als_info and job.als_info.live_version:
+                proj += f"   ·   Live {job.als_info.live_version}"
         ctx_label = "PROJECT"
         if job.context:
             ctx_label, proj = job.context
@@ -714,13 +837,20 @@ class ExportPopup(ThemedWindow):
         self.stepper(row, self.v_bpm, 1, mark_bpm=True)
         self.bpm_chips = tk.Frame(row, bg=C["bg"])
         self.bpm_chips.pack(side="left", padx=(10, 0))
+        self.bpm_link = None
+        if not job.detect_bpm and job.detect_file:  # project / file name gave a BPM - offer a second opinion
+            self.bpm_link = tk.Label(row, text="check against audio", bg=C["bg"], fg=C["muted"], font=f.small,
+                                     cursor="hand2")
+            self.bpm_link.pack(side="left", padx=(10, 0))
+            self.bpm_link.bind("<Button-1>", lambda e: self.ask_bpm_estimate())
+            self.bpm_link.bind("<Enter>", lambda e: self.bpm_link.config(fg=C["accent"]))
+            self.bpm_link.bind("<Leave>", lambda e: self.bpm_link.config(fg=C["muted"]))
         self.e_bpm.bind("<Key>", lambda e: setattr(self, "user_set_bpm", True))
         r += 1
-        if job.standalone:
+        if job.standalone or job.detect_bpm:
             self.bpm_hint = self.hint(r, job.bpm_source or "estimating from audio…")
         else:
-            self.bpm_hint = self.hint(r, job.bpm_source,
-                                      warn=not job.flp_info or job.flp_info.tempo_source not in ("project", "legacy"))
+            self.bpm_hint = self.hint(r, job.bpm_source, warn=not job.bpm_trusted)
 
         r += 1
         label(b, f, "KEY").grid(row=r, column=0, sticky="w")
@@ -823,8 +953,15 @@ class ExportPopup(ThemedWindow):
             lb.bind("<Enter>", lambda e, w=lb: w.config(bg=C["field_hi"]))
             lb.bind("<Leave>", lambda e, w=lb: w.config(bg=C["field"]))
 
+    def ask_bpm_estimate(self):
+        if self.bpm_link is not None:
+            self.bpm_link.destroy()
+            self.bpm_link = None
+        self.bpm_hint.config(text=f"{self.job.bpm_source} · estimating from audio…")
+        self.app.estimate_bpm(self, self.job)
+
     def key_menu(self, anchor):
-        cfg = self.app.cfg
+        cfg = self.cfg
         m = tk.Menu(self, tearoff=0, bg=C["panel"], fg=C["text"], activebackground=C["accent"],
                     activeforeground=C["on_accent"], font=self.f.body, bd=0)
         from key_detect import key_name
@@ -913,7 +1050,7 @@ class ExportPopup(ThemedWindow):
     def suggest_version(self):
         if self.user_set_version:
             return
-        cfg = self.app.cfg
+        cfg = self.cfg
         d = dest_dir(cfg, self.v_name.get(), self.job_date())
         nv = naming.next_version(d, cfg["template"], naming.sanitize(self.v_name.get()), cfg["version_digits"])
         self.v_ver.set(str(nv))
@@ -927,7 +1064,7 @@ class ExportPopup(ThemedWindow):
             return time.time()
 
     def targets(self):
-        cfg, job = self.app.cfg, self.job
+        cfg, job = self.cfg, self.job
         stem = naming.build_stem(cfg["template"], self.v_name.get(), self.v_bpm.get(), self.v_key.get(),
                                  self.v_ver.get(), cfg["version_digits"])
         d = dest_dir(cfg, self.v_name.get(), self.job_date())
@@ -988,35 +1125,106 @@ class ExportPopup(ThemedWindow):
 
 # --------------------------------------------------------------- settings ----
 class SettingsWindow(ThemedWindow):
-    def __init__(self, app, first_run=False):
-        super().__init__(app, "Export Namer · Settings" if not first_run else "Export Namer · Setup", 600)
-        self.first_run = first_run
-        cfg, b, f = app.cfg, self.body, self.f
-        if first_run:
-            label(b, f, "Pick where FL saves projects and where finished beats should go.", fg=C["text"],
-                  font=f.body).grid(row=0, column=0, columnspan=3, sticky="w", pady=(0, 12))
-        self.v_watch = tk.StringVar(value=cfg["watch_folder"])
-        self.v_beats = tk.StringVar(value=cfg["beats_folder"])
-        self.v_tmpl = tk.StringVar(value=cfg["template"])
-        self.v_style = tk.StringVar(value=cfg["key_style"])
-        self.v_acc = tk.StringVar(value=cfg["accidentals"])
-        self.v_action = tk.StringVar(value=cfg["action"])
-        self.v_sub = tk.BooleanVar(value=cfg["subfolder_per_beat"])
-        self.v_date = tk.BooleanVar(value=cfg.get("folder_date", True))
-        self.v_detect = tk.BooleanVar(value=cfg["detect_key"])
-        self.v_updates = tk.BooleanVar(value=cfg.get("check_updates", True))
-        self.v_ign = tk.StringVar(value=", ".join(cfg["ignore_folders"]))
+    """Settings, with a tab per program. Each tab shows that program's folders and theme, in
+    that program's colours; switching tabs rebuilds the window and keeps unsaved edits."""
 
-        r = 1
-        for lab, var, hint in (("WATCH FOLDER", self.v_watch, "FL projects root - all subfolders are watched"),
-                               ("BEATS FOLDER", self.v_beats, "renamed exports land here")):
+    def __init__(self, app, first_run=False, daw=None, draft=None, at=None, prev_daw=None):
+        self.daw = daw if daw in DAWS else app.cfg.get("default_daw", "fl")
+        self.prev_daw = prev_daw or app.daw
+        self.draft = draft if draft is not None else json.loads(json.dumps(app.cfg))
+        self.draft.setdefault("_startup", startup_enabled())
+        app.apply_theme(cfg=daw_cfg(self.draft, self.daw), daw=self.daw)  # this tab's (unsaved) colours
+        super().__init__(app, "Export Namer · Settings" if not first_run else "Export Namer · Setup", 600)
+        self.first_run, self.at = first_run, at
+        d, b, f = daw_cfg(self.draft, self.daw), self.body, self.f
+        name = DAW_NAMES[self.daw]
+        r = 0
+        if first_run:
+            label(b, f, f"Pick where {name} saves projects and where finished beats should go.\n"
+                        "Use the other tab to set up the other program too.", fg=C["text"],
+                  font=f.body).grid(row=r, column=0, columnspan=3, sticky="w", pady=(0, 12))
+            r += 1
+
+        # Program tabs
+        label(b, f, "PROGRAM").grid(row=r, column=0, sticky="w", padx=(0, 14))
+        trow = tk.Frame(b, bg=C["bg"])
+        trow.grid(row=r, column=1, columnspan=2, sticky="w")
+        self.v_daw = tk.StringVar(value=self.daw)
+        Segmented(trow, f, [(k, DAW_NAMES[k].upper()) for k in DAWS], self.v_daw,
+                  command=lambda: self.switch(self.v_daw.get())).pack(side="left")
+        self.default_lbl = tk.Label(trow, text="", bg=C["bg"], font=f.small)
+        self.default_lbl.pack(side="left", padx=(12, 0))
+        self.default_lbl.bind("<Button-1>", lambda e: self.set_default())
+        self.render_default()
+        r += 1
+        tk.Frame(b, bg=C["border"], height=1).grid(row=r, column=0, columnspan=3, sticky="ew", pady=10)
+        r += 1
+
+        # This program's settings
+        self.v_watch = tk.StringVar(value=d["watch_folder"])
+        self.v_beats = tk.StringVar(value=d["beats_folder"])
+        self.v_on = tk.BooleanVar(value=watch_enabled(self.draft, self.daw))
+        self.v_ign = tk.StringVar(value=", ".join(d["ignore_folders"]))
+        watch_hint = ("FL projects root - all subfolders are watched" if self.daw == "fl" else
+                      "where your Live projects live - all subfolders are watched")
+        for lab, var, hint in (("WATCH FOLDER", self.v_watch, watch_hint),
+                               ("BEATS FOLDER", self.v_beats, f"renamed {name} exports land here")):
             label(b, f, lab).grid(row=r, column=0, sticky="w", padx=(0, 14))
             e = flat_entry(b, f, 40, var)
             e.grid(row=r, column=1, sticky="ew", ipady=4)
             FlatButton(b, "BROWSE", lambda v=var: self.browse(v), f).grid(row=r, column=2, padx=(6, 0))
             label(b, f, hint, fg=C["muted"], font=f.small).grid(row=r + 1, column=1, sticky="w", pady=(1, 8))
             r += 2
+        tg0 = tk.Frame(b, bg=C["bg"])
+        tg0.grid(row=r, column=1, columnspan=2, sticky="w", pady=(0, 8))
+        Toggle(tg0, f, f"Watch for {name} exports (both programs can be watched at once)", self.v_on).pack(side="left")
+        r += 1
+        label(b, f, "IGNORE").grid(row=r, column=0, sticky="w")
+        flat_entry(b, f, 40, self.v_ign).grid(row=r, column=1, columnspan=2, sticky="ew", ipady=4)
+        label(b, f, "subfolder names to skip (recordings, backups…)", fg=C["muted"], font=f.small).grid(
+            row=r + 1, column=1, columnspan=2, sticky="w")
+        r += 2
 
+        # Theme (per program)
+        self.v_theme = tk.StringVar(value=d.get("theme", "auto"))
+        self.theme_file = d.get("theme_file", "")
+        self.theme_colors = dict(d.get("theme_colors") or {})
+        label(b, f, "THEME").grid(row=r, column=0, sticky="w", pady=(10, 4))
+        self.theme_seg = Segmented(b, f, [("auto", f"Match {name}"), ("default", theme.DEFAULT_NAMES[self.daw]),
+                                          ("file", "Theme file"), ("custom", "Custom")], self.v_theme,
+                                   command=self.update_theme)
+        self.theme_seg.grid(row=r, column=1, columnspan=2, sticky="w", pady=(10, 4))
+        r += 1
+        srow = tk.Frame(b, bg=C["bg"])
+        srow.grid(row=r, column=1, columnspan=2, sticky="ew")
+        self.swatch = tk.Canvas(srow, width=5 * 16, height=14, bg=C["bg"], highlightthickness=0)
+        self.swatch.pack(side="left", padx=(0, 8))
+        self.theme_status = label(srow, f, "", fg=C["muted"], font=f.small, wraplength=430)
+        self.theme_status.pack(side="left")
+        r += 1
+        tb = tk.Frame(b, bg=C["bg"])
+        tb.grid(row=r, column=1, columnspan=2, sticky="w", pady=(6, 0))
+        FlatButton(tb, "LOAD .FLSTHEME…" if self.daw == "fl" else "LOAD .ASK…", self.load_theme_file,
+                   f).pack(side="left")
+        FlatButton(tb, "EDIT COLOURS…", self.edit_colours, f).pack(side="left", padx=(6, 0))
+        r += 1
+
+        # Shared by both programs
+        dv = self.draft
+        self.v_tmpl = tk.StringVar(value=dv["template"])
+        self.v_style = tk.StringVar(value=dv["key_style"])
+        self.v_acc = tk.StringVar(value=dv["accidentals"])
+        self.v_action = tk.StringVar(value=dv["action"])
+        self.v_sub = tk.BooleanVar(value=dv["subfolder_per_beat"])
+        self.v_date = tk.BooleanVar(value=dv.get("folder_date", True))
+        self.v_detect = tk.BooleanVar(value=dv["detect_key"])
+        self.v_updates = tk.BooleanVar(value=dv.get("check_updates", True))
+        self.v_startup = tk.BooleanVar(value=dv["_startup"])
+        tk.Frame(b, bg=C["border"], height=1).grid(row=r, column=0, columnspan=3, sticky="ew", pady=(14, 4))
+        r += 1
+        label(b, f, "BOTH PROGRAMS", fg=C["muted"], font=f.small).grid(row=r, column=0, columnspan=3, sticky="w",
+                                                                    pady=(0, 6))
+        r += 1
         label(b, f, "NAME FORMAT").grid(row=r, column=0, sticky="w")
         flat_entry(b, f, 40, self.v_tmpl).grid(row=r, column=1, columnspan=2, sticky="ew", ipady=4)
         self.example = label(b, f, "", fg=C["accent"], font=f.small)
@@ -1039,41 +1247,12 @@ class SettingsWindow(ThemedWindow):
         Toggle(tg, f, "Subfolder per beat", self.v_sub).pack(side="left", padx=(0, 18))
         Toggle(tg, f, "Date on beat folders", self.v_date).pack(side="left", padx=(0, 18))
         Toggle(tg, f, "Detect key from audio", self.v_detect).pack(side="left")
-        self.v_startup = tk.BooleanVar(value=startup_enabled())
         r += 1
         tg2 = tk.Frame(b, bg=C["bg"])
         tg2.grid(row=r, column=1, columnspan=2, sticky="w", pady=(0, 4))
         Toggle(tg2, f, "Check for updates", self.v_updates).pack(side="left", padx=(0, 18))
         if sys.platform.startswith("win"):
             Toggle(tg2, f, "Start with Windows (watcher runs in the tray)", self.v_startup).pack(side="left")
-        r += 1
-        label(b, f, "IGNORE").grid(row=r, column=0, sticky="w")
-        flat_entry(b, f, 40, self.v_ign).grid(row=r, column=1, columnspan=2, sticky="ew", ipady=4)
-        label(b, f, "subfolder names to skip (recordings, backups…)", fg=C["muted"], font=f.small).grid(
-            row=r + 1, column=1, columnspan=2, sticky="w")
-        r += 2
-
-        # Theme
-        self.v_theme = tk.StringVar(value=cfg.get("theme", "auto"))
-        self.theme_file = cfg.get("theme_file", "")
-        self.theme_colors = dict(cfg.get("theme_colors") or {})
-        label(b, f, "THEME").grid(row=r, column=0, sticky="w", pady=(10, 4))
-        self.theme_seg = Segmented(b, f, [("auto", "Match FL Studio"), ("default", "FL default"),
-                                          ("file", "Theme file"), ("custom", "Custom")], self.v_theme,
-                                   command=self.update_theme)
-        self.theme_seg.grid(row=r, column=1, columnspan=2, sticky="w", pady=(10, 4))
-        r += 1
-        trow = tk.Frame(b, bg=C["bg"])
-        trow.grid(row=r, column=1, columnspan=2, sticky="ew")
-        self.swatch = tk.Canvas(trow, width=5 * 16, height=14, bg=C["bg"], highlightthickness=0)
-        self.swatch.pack(side="left", padx=(0, 8))
-        self.theme_status = label(trow, f, "", fg=C["muted"], font=f.small)
-        self.theme_status.pack(side="left")
-        r += 1
-        tb = tk.Frame(b, bg=C["bg"])
-        tb.grid(row=r, column=1, columnspan=2, sticky="w", pady=(6, 0))
-        FlatButton(tb, "LOAD .FLSTHEME…", self.load_theme_file, f).pack(side="left")
-        FlatButton(tb, "EDIT COLOURS…", self.edit_colours, f).pack(side="left", padx=(6, 0))
         r += 1
 
         bot = tk.Frame(b, bg=C["bg"])
@@ -1088,9 +1267,58 @@ class SettingsWindow(ThemedWindow):
         self.bind("<Escape>", lambda e: self.on_close())
         self.show()
 
+    def show(self):
+        if not self.at:
+            return super().show()
+        self.update_idletasks()
+        w = max(self.width, self.winfo_reqwidth())
+        self.geometry(f"{w}x{self.winfo_reqheight()}+{self.at[0]}+{self.at[1]}")
+        self.deiconify()
+        self.lift()
+        self.after(50, self.focus_force)
+
+    # -- tabs
+    def collect(self):
+        """Copy what's on screen into the draft."""
+        d, k = self.draft, lambda key: daw_key(self.daw, key)
+        d[k("watch_folder")] = self.v_watch.get().strip()
+        d[k("beats_folder")] = self.v_beats.get().strip()
+        d[k("ignore_folders")] = [x.strip() for x in self.v_ign.get().split(",") if x.strip()]
+        d[k("theme")], d[k("theme_file")], d[k("theme_colors")] = (self.v_theme.get(), self.theme_file,
+                                                                   self.theme_colors)
+        d[f"watch_{self.daw}"] = self.v_on.get()
+        d.update(template=self.v_tmpl.get(), key_style=self.v_style.get(), accidentals=self.v_acc.get(),
+                 action=self.v_action.get(), subfolder_per_beat=self.v_sub.get(), folder_date=self.v_date.get(),
+                 detect_key=self.v_detect.get(), check_updates=self.v_updates.get(), _startup=self.v_startup.get())
+
+    def switch(self, daw):
+        if daw == self.daw:
+            return
+        self.collect()
+        at = (self.winfo_x(), self.winfo_y())
+        self.destroy()
+        SettingsWindow(self.app, self.first_run, daw, self.draft, at, self.prev_daw)
+
+    def render_default(self):
+        if self.draft.get("default_daw", "fl") == self.daw:
+            self.default_lbl.config(text="★  opens first", fg=C["muted"], cursor="")
+        else:
+            self.default_lbl.config(text="set as default", fg=C["accent"], cursor="hand2")
+
+    def set_default(self):
+        if self.draft.get("default_daw", "fl") == self.daw:
+            return
+        self.draft["default_daw"] = self.daw
+        if not self.first_run:  # takes effect straight away, even without SAVE
+            self.app.cfg["default_daw"] = self.daw
+            save_json(CONFIG_PATH, self.app.cfg)
+        self.render_default()
+        self.app.toast(f"{DAW_NAMES[self.daw]} opens first from now on.")
+
     # -- theme
     def theme_cfg(self) -> dict:
-        return {"theme": self.v_theme.get(), "theme_file": self.theme_file, "theme_colors": self.theme_colors}
+        return {"daw": self.daw, "theme": self.v_theme.get(), "theme_file": self.theme_file,
+                "theme_colors": self.theme_colors}
 
     def update_theme(self):
         if not hasattr(self, "theme_status"):
@@ -1104,16 +1332,19 @@ class SettingsWindow(ThemedWindow):
 
     def load_theme_file(self):
         start = self.theme_file and str(Path(self.theme_file).parent)
-        dirs = theme.theme_dirs()
+        if self.daw == "ableton":
+            dirs, kind, pattern, reader = theme.ableton_theme_dirs(), "Ableton Live theme", "*.ask", theme.read_ask
+        else:
+            dirs, kind, pattern, reader = theme.theme_dirs(), "FL Studio theme", "*.flstheme", theme.read_flstheme
         self.attributes("-topmost", False)
-        p = filedialog.askopenfilename(parent=self, title="Choose an FL Studio theme",
+        p = filedialog.askopenfilename(parent=self, title=f"Choose an {kind}",
                                        initialdir=start or (str(dirs[0]) if dirs else str(Path.home())),
-                                       filetypes=[("FL Studio theme", "*.flstheme"), ("All files", "*.*")])
+                                       filetypes=[(kind, pattern), ("All files", "*.*")])
         self.attributes("-topmost", True)
         if not p:
             return
         try:
-            theme.read_flstheme(p)
+            reader(p)
         except Exception as e:
             self.app.toast(f"Couldn't use that file: {e}")
             return
@@ -1126,7 +1357,8 @@ class SettingsWindow(ThemedWindow):
         def done(seeds):
             self.theme_colors = seeds
             self.theme_seg.set("custom")
-        ThemeEditor(self.app, start, done, parent=self)
+        ThemeEditor(self.app, start, done, parent=self, default=theme.DEFAULTS[self.daw],
+                    default_name=theme.DEFAULT_NAMES[self.daw])
 
     def browse(self, var):
         self.attributes("-topmost", False)
@@ -1145,32 +1377,31 @@ class SettingsWindow(ThemedWindow):
         t = self.v_tmpl.get()
         if "{name}" not in t or "{version}" not in t:
             return
+        self.collect()
+        startup = self.draft.pop("_startup", None)
         cfg = self.app.cfg
-        old_watch = cfg["watch_folder"]
-        cfg.update(watch_folder=self.v_watch.get().strip(), beats_folder=self.v_beats.get().strip(), template=t,
-                   key_style=self.v_style.get(), accidentals=self.v_acc.get(), action=self.v_action.get(),
-                   subfolder_per_beat=self.v_sub.get(), folder_date=self.v_date.get(),
-                   detect_key=self.v_detect.get(), check_updates=self.v_updates.get(),
-                   ignore_folders=[x.strip() for x in self.v_ign.get().split(",") if x.strip()],
-                   **self.theme_cfg())
+        cfg.update(self.draft)
         save_json(CONFIG_PATH, cfg)
-        if sys.platform.startswith("win") and self.v_startup.get() != startup_enabled():
+        if sys.platform.startswith("win") and startup is not None and startup != startup_enabled():
             try:
-                set_startup(self.v_startup.get())
+                set_startup(startup)
             except Exception as e:
                 logging.exception("startup toggle failed")
                 self.app.toast(f"Couldn't change startup setting: {e}")
         self.destroy()
-        self.app.apply_theme(announce=False)
+        self.app.apply_theme(daw=self.prev_daw)
         self.app.settings_saved()
         if self.first_run:
             self.app.start_watching()
-            self.app.toast("Watching for exports. Find me in the system tray.")
-        elif old_watch != cfg["watch_folder"] and self.app.watcher.observer is not None:
-            self.app.watcher.restart()
+            watched = [DAW_NAMES[k] for k in DAWS if watch_enabled(cfg, k)]
+            self.app.toast(f"Watching for {' and '.join(watched)} exports. Find me in the system tray."
+                           if watched else "Nothing to watch yet - turn on a program in Settings (tray icon).")
+        else:
+            self.app.refresh_watchers()
 
     def on_close(self):
         self.destroy()
+        self.app.apply_theme(daw=self.prev_daw)  # drop any unsaved theme preview
         if self.first_run:
             self.app.quit()
 
@@ -1179,9 +1410,10 @@ class SettingsWindow(ThemedWindow):
 class ThemeEditor(ThemedWindow):
     """Pick the five theme colours by hand, from a colour dialog, or off the screen."""
 
-    def __init__(self, app, seeds: dict, on_done, parent=None):
+    def __init__(self, app, seeds: dict, on_done, parent=None, default=None, default_name="FL default"):
         super().__init__(app, "Theme · Colours", 470)
         self.on_done, self.parent_win = on_done, parent
+        self.default = default or theme.FL_DEFAULT
         b, f = self.body, self.f
         label(b, f, "Click a swatch, type a hex code, or hit PICK and click\nthe matching spot in your FL Studio window.",
               fg=C["text"], font=f.body).grid(row=0, column=0, columnspan=4, sticky="w", pady=(0, 12))
@@ -1205,9 +1437,10 @@ class ThemeEditor(ThemedWindow):
 
         bot = tk.Frame(b, bg=C["bg"])
         bot.grid(row=11, column=0, columnspan=4, sticky="ew", pady=(16, 0))
-        reset = tk.Label(bot, text="reset to FL default", bg=C["bg"], fg=C["muted"], font=f.small, cursor="hand2")
+        reset = tk.Label(bot, text=f"reset to {default_name}", bg=C["bg"], fg=C["muted"], font=f.small,
+                         cursor="hand2")
         reset.pack(side="left")
-        reset.bind("<Button-1>", lambda e: self.set_all(theme.seeds_of(theme.FL_DEFAULT)))
+        reset.bind("<Button-1>", lambda e: self.set_all(theme.seeds_of(self.default)))
         FlatButton(bot, "USE THESE", self.done, f, primary=True).pack(side="right")
         FlatButton(bot, "CANCEL", self.on_close, f).pack(side="right", padx=(0, 8))
         b.columnconfigure(3, weight=1)
@@ -1439,6 +1672,7 @@ class App:
         self.root.title(APP)
         self.fonts = Fonts(self.root)
         self.cfg = load_config()
+        self.daw = self.cfg.get("default_daw") if self.cfg.get("default_daw") in DAWS else "fl"  # whose colours
         self.theme_src, self.theme_mtime, self._theme_seen = None, None, None
         self.apply_theme()
         self.state = load_json(STATE_PATH, {"projects": {}, "ignored_paths": []})
@@ -1447,19 +1681,28 @@ class App:
         self.popup = None
         self.paused = False
         self.undo_stack: list[list] = []
-        self.watcher = ExportWatcher(self)
+        self.own_outputs: set[str] = set()   # files we wrote - no watcher treats them as new exports
+        self.watchers = {d: ExportWatcher(self, d) for d in DAWS}
+        self.watching = False
         self.tray = None
         self.root.after(100, self.pump)
         self.root.after(THEME_POLL_MS, self.watch_theme)
 
+    def dcfg(self, daw=None) -> dict:
+        return daw_cfg(self.cfg, daw or self.daw)
+
     # -- theme
-    def apply_theme(self, announce=False) -> bool:
-        """Load the palette the config asks for into C. True if the colours changed."""
+    def apply_theme(self, announce=False, cfg=None, daw=None) -> bool:
+        """Load a program's palette into C (daw: switch program; cfg: preview unsaved settings).
+        True if the colours changed."""
+        if daw in DAWS:
+            self.daw = daw
         try:
-            pal, status, src = theme.resolve(self.cfg)
+            pal, status, src = theme.resolve(cfg or self.dcfg())
         except Exception:
-            logging.exception("theme failed - using FL default")
-            pal, status, src = dict(theme.FL_DEFAULT), "FL default", None
+            logging.exception("theme failed - using the default")
+            pal = dict(theme.DEFAULTS[self.daw])
+            status, src = theme.DEFAULT_NAMES[self.daw], None
         changed = pal != C
         C.clear()
         C.update(pal)
@@ -1469,16 +1712,22 @@ class App:
             logging.info("theme: %s", status)
             self.retheme()
             if announce:
-                self.toast("Colours updated to match FL Studio.")
+                self.toast(f"Colours updated to match {DAW_NAMES[self.daw]}.")
         return changed
+
+    def set_daw(self, daw) -> bool:
+        """Switch to a program's colours. True if anything on screen was rethemed."""
+        if daw == self.daw:
+            return False
+        return self.apply_theme(daw=daw)
 
     def watch_theme(self):
         """Every few seconds: has FL (or the chosen file) written a new theme?"""
         try:
-            mode = self.cfg.get("theme", "auto")
+            mode = self.dcfg().get("theme", "auto")
             src = self.theme_src
             if mode == "auto":
-                src = theme.find_current_theme()
+                src = theme.auto_source(self.daw)
             m = _mtime(src)
             if src != self.theme_src or m != self.theme_mtime:
                 if m == self._theme_seen:       # unchanged for one tick = FL has finished writing it
@@ -1511,22 +1760,36 @@ class App:
         self.root.after(100, self.pump)
 
     def start_watching(self):
-        try:
-            self.watcher.start()
-        except Exception as e:
-            logging.exception("watcher failed")
-            self.toast(f"Couldn't watch {self.cfg['watch_folder']}: {e}")
+        self.watching = True
+        self.refresh_watchers()
 
-    def submit_files(self, files):  # called from watcher thread
-        self.call(lambda: self.enqueue(files))
+    def refresh_watchers(self):
+        """Start / stop / move each program's watcher to match the config."""
+        if not self.watching:
+            return
+        for d, w in self.watchers.items():
+            want = watch_enabled(self.cfg, d)
+            root = str(Path(self.dcfg(d)["watch_folder"]))
+            if w.observer is not None and (not want or w.root != root):
+                w.stop()
+                logging.info("stopped watching %s", w.root)
+            if want and w.observer is None:
+                try:
+                    w.start()
+                except Exception as e:
+                    logging.exception("watcher failed")
+                    self.toast(f"Couldn't watch {root}: {e}")
 
-    def enqueue(self, files):
+    def submit_files(self, files, daw="fl"):  # called from watcher thread
+        self.call(lambda f=files, d=daw: self.enqueue(f, d))
+
+    def enqueue(self, files, daw="fl"):
         try:
-            job = build_job(files, self.cfg, self.state)
+            job = build_job(files, self.dcfg(daw), self.state)
         except Exception:
             logging.exception("build_job failed for %s", files)
             return
-        logging.info("job: %s files, name=%s bpm=%s", len(job.files), job.name, job.bpm)
+        logging.info("job (%s): %s files, name=%s bpm=%s key=%s", daw, len(job.files), job.name, job.bpm, job.key)
         self.jobs.append(job)
         self.next_popup()
 
@@ -1537,6 +1800,7 @@ class App:
         if not self.jobs:
             return
         job = self.jobs.pop(0)
+        self.set_daw(job.daw)  # the popup wears the colours of the program the export came from
         self.popup = ExportPopup(self, job)
         if self.jobs:
             self.popup.badge.config(text=f"+{len(self.jobs)} waiting")
@@ -1545,13 +1809,17 @@ class App:
         elif job.detect_bpm:
             self.popup.set_bpm_detection([], "format not readable")
 
-    def detect(self, popup, job):
+    def estimate_bpm(self, popup, job):
+        """Popup asked for an audio tempo estimate on top of the project's BPM."""
+        threading.Thread(target=self.detect, args=(popup, job, True), daemon=True).start()
+
+    def detect(self, popup, job, bpm_only=False):
         bpm = None
         try:
             bpm = float(job.bpm) if job.bpm else None
         except ValueError:
             pass
-        if job.detect_bpm:
+        if job.detect_bpm or bpm_only:
             try:
                 from bpm_detect import estimate_bpm
                 res = estimate_bpm(str(job.detect_file))
@@ -1561,7 +1829,7 @@ class App:
                 logging.exception("bpm estimate failed")
                 msg = type(e).__name__
                 self.call(lambda m=msg: popup.set_bpm_detection([], m))
-        if not self.cfg["detect_key"]:
+        if bpm_only or not self.cfg["detect_key"]:
             return
         try:
             from key_detect import detect_key
@@ -1590,7 +1858,7 @@ class App:
                 if dst.exists() and os.path.samefile(src, dst):
                     continue  # already named and filed exactly like this
                 dst = naming.unique_path(dst)
-                self.watcher.own_outputs.add(str(dst).lower())
+                self.own_outputs.add(str(dst).lower())
                 for attempt in range(20):
                     try:
                         if keep:
@@ -1617,7 +1885,8 @@ class App:
             return True
         if job.project_key:
             self.state.setdefault("projects", {})[job.project_key] = {
-                "name": name, "key": key, "bpm": bpm, "last_version": version, "updated": time.time()}
+                "name": name, "key": key, "bpm": bpm, "last_version": version, "updated": time.time(),
+                "daw": job.daw, "als_key": job.als_key}
             save_json(STATE_PATH, self.state)
         shown = Path(done[0][1]).name if job.kind == "single" else Path(done[0][1]).parent.name + "/"
         self.toast(f"Saved  {shown}", folder=folder)
@@ -1634,7 +1903,7 @@ class App:
                     os.remove(dst)
                 else:
                     back = naming.unique_path(Path(src))
-                    self.watcher.own_outputs.add(str(back).lower())  # don't treat it as a new export
+                    self.own_outputs.add(str(back).lower())  # don't treat it as a new export
                     shutil.move(dst, back)
                 parent = Path(dst).parent
                 if parent.name.endswith("_stems") and not any(parent.iterdir()):
@@ -1683,8 +1952,8 @@ class App:
         except Exception:
             logging.exception("toast failed")
 
-    def settings(self, first_run=False):
-        SettingsWindow(self, first_run)
+    def settings(self, first_run=False, daw=None):
+        SettingsWindow(self, first_run, daw)
 
     def toggle_pause(self):
         self.paused = not self.paused
@@ -1699,8 +1968,18 @@ class App:
             return
         img = logo_image()
         M = pystray.MenuItem
+        def first():
+            return self.cfg.get("default_daw", "fl")
+
+        def second():
+            return next(d for d in DAWS if d != first())
+
+        def open_beats(pick):
+            self.call(lambda: self.safe_open(self.dcfg(pick())["beats_folder"], make=True))
         menu = pystray.Menu(
-            M("Open Beats folder", lambda: self.call(lambda: self.safe_open(self.cfg["beats_folder"], make=True)), default=True),
+            M(lambda i: f"Open {DAW_NAMES[first()]} beats folder", lambda: open_beats(first), default=True),
+            M(lambda i: f"Open {DAW_NAMES[second()]} beats folder", lambda: open_beats(second),
+              visible=lambda i: watch_enabled(self.cfg, second())),
             M("Open Beat Sorter", lambda: launch_sorter()),
             M("Undo last rename", lambda: self.call(self.undo_last)),
             M("Pause watching", lambda: self.call(self.toggle_pause), checked=lambda i: self.paused),
@@ -1717,7 +1996,8 @@ class App:
 
     def quit(self):
         try:
-            self.watcher.stop()
+            for w in self.watchers.values():
+                w.stop()
             if self.tray:
                 self.tray.stop()
         finally:
@@ -1725,9 +2005,9 @@ class App:
 
     def run(self, demo=False, test_file=None):
         if demo:
-            self.demo()
+            self.demo(demo if demo in DAWS else "fl")
         elif test_file:
-            self.enqueue([Path(test_file)])
+            self.enqueue([Path(test_file)], project_daw_near(Path(test_file).parent) or "fl")
         elif not CONFIG_PATH.exists():
             self.settings(first_run=True)
         else:
@@ -1737,11 +2017,19 @@ class App:
             self.check_updates_later()
         self.root.mainloop()
 
-    def demo(self):
-        job = Job(files=[Path("Nightdrive_2.wav"), Path("Nightdrive_2.mp3")], name="Nightdrive",
-                  name_source="from project name", bpm="140", bpm_source="read from project",
-                  key="", key_source="", flp=Path("Nightdrive_2.flp"),
-                  flp_info=FlpInfo(140.0, "project", "", "", "26.1.5.5618"))
+    def demo(self, daw="fl"):
+        if daw == "ableton":
+            job = Job(files=[Path("Nightdrive.wav")], daw="ableton", name="Nightdrive",
+                      name_source="from project name", bpm="92", bpm_source="read from Ableton set",
+                      key="Fm", key_source=ALS_KEY_SOURCES["scale"], project=Path("Nightdrive.als"),
+                      bpm_trusted=True, als_info=AlsInfo(92.0, "project", 5, True, "Minor", "scale", "12.1.5"),
+                      detect_file=Path("Nightdrive.wav"))
+        else:
+            job = Job(files=[Path("Nightdrive_2.wav"), Path("Nightdrive_2.mp3")], name="Nightdrive",
+                      name_source="from project name", bpm="140", bpm_source="read from project",
+                      key="", key_source="", project=Path("Nightdrive_2.flp"), bpm_trusted=True,
+                      flp_info=FlpInfo(140.0, "project", "", "", "26.1.5.5618"))
+        self.set_daw(daw)
         self.popup = ExportPopup(self, job)
         self.root.after(700, lambda: self.popup.set_detection([("Fm", .71), ("Ab", .19), ("Cm", .06)]))
         self.popup.e_name.bind("<Destroy>", lambda e: self.root.after(200, self.root.quit))
@@ -1768,7 +2056,7 @@ def main():
         except Exception:
             pass
     args = sys.argv[1:]
-    demo = "--demo" in args
+    demo = ("ableton" if "--ableton" in args else "fl") if "--demo" in args else False
     test_file = args[args.index("--test") + 1] if "--test" in args and len(args) > args.index("--test") + 1 else None
     lock = None
     if not demo and not test_file:

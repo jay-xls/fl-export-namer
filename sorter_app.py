@@ -21,8 +21,9 @@ sys.path.insert(0, str(HERE))
 
 import naming  # noqa: E402
 import theme  # noqa: E402
-from namer_core import (APPDIR, AUDIO_EXTS, DETECTABLE, FROZEN, LOG_PATH, App, C, Job,  # noqa: E402
-                        SettingsWindow, Toggle, __version__, label, logo_image, short)
+from namer_core import (APPDIR, AUDIO_EXTS, CONFIG_PATH, DAW_NAMES, DAWS, DETECTABLE, FROZEN,  # noqa: E402
+                        LOG_PATH, App, C, Job, Segmented, SettingsWindow, Toggle, __version__, daw_cfg,
+                        label, logo_image, save_json, short)
 
 PORT = 47614
 MAX_RECENT = 7
@@ -74,9 +75,10 @@ def group_files(files: list[Path]) -> list[list[Path]]:
 
 
 def build_standalone_job(files: list[Path], cfg: dict) -> Job:
+    """cfg as daw_cfg() returns it - the beat is filed into that program's beats folder."""
     files = sorted(files, key=lambda p: (p.suffix.lower() != ".wav", p.name.lower()))
     hints = naming.parse_hints(files[0].stem, cfg["template"], cfg["key_style"])
-    job = Job(files=files, standalone=True, detect_bpm=True,
+    job = Job(files=files, standalone=True, detect_bpm=True, daw=cfg.get("daw", "fl"),
               context=("FOLDER", short(str(files[0].parent))))
     job.name = hints.get("name") or files[0].stem
     job.name_source = ("unnamed - give it a name" if naming.is_generic(job.name)
@@ -116,7 +118,29 @@ class SorterApp(App):
         self.root.after(200, self.update_status)
 
     def settings_saved(self):
-        self.dest_lbl.config(text=short(self.cfg["beats_folder"], 52))
+        self.dest_lbl.config(text=short(self.dcfg()["beats_folder"], 52))
+        self.render_default()
+
+    # -- program tabs: which beats folder drops go to, and whose colours the window wears
+    def switch_daw(self, daw):
+        if daw == self.daw:
+            return
+        if not self.set_daw(daw):   # identical palettes: nothing was rebuilt, refresh by hand
+            self.retheme(force=True)
+
+    def set_default(self):
+        if self.cfg.get("default_daw", "fl") == self.daw:
+            return
+        self.cfg["default_daw"] = self.daw
+        save_json(CONFIG_PATH, self.cfg)
+        self.render_default()
+        self.toast(f"Beat Sorter opens on {DAW_NAMES[self.daw]} from now on.")
+
+    def render_default(self):
+        if self.cfg.get("default_daw", "fl") == self.daw:
+            self.default_lbl.config(text="★ default", fg=C["muted"], cursor="")
+        else:
+            self.default_lbl.config(text="set as default", fg=C["accent"], cursor="hand2")
 
     # -- window
     def build_window(self):
@@ -138,9 +162,16 @@ class SorterApp(App):
             logo.create_rectangle(1 + i * 4, 19 - h, 3.5 + i * 4, 19, fill=C["accent"], width=0)
         tk.Label(head, text="BEAT SORTER", bg=C["panel"], fg=C["accent"], font=f.title).pack(side="left")
         tk.Label(head, text=f"v{__version__}", bg=C["panel"], fg=C["muted"], font=f.small).pack(side="right", padx=14)
-        tk.Label(head, text="BPM + key from the audio  ·  rename  ·  file it", bg=C["panel"], fg=C["muted"],
-                 font=f.small).pack(side="left", padx=12)
+        self.v_daw = tk.StringVar(value=self.daw)
+        self.default_lbl = tk.Label(head, text="", bg=C["panel"], font=f.small)
+        self.default_lbl.pack(side="right", padx=(8, 4))
+        self.default_lbl.bind("<Button-1>", lambda e: self.set_default())
+        Segmented(head, f, [(k, DAW_NAMES[k].upper()) for k in DAWS], self.v_daw,
+                  command=lambda: self.switch_daw(self.v_daw.get())).pack(side="right", padx=(12, 0))
+        self.render_default()
         tk.Frame(r, bg=C["border"], height=1).pack(fill="x")
+        tk.Label(r, text="BPM + key from the audio  ·  rename  ·  file it", bg=C["bg"], fg=C["muted"],
+                 font=f.small, anchor="w", padx=18).pack(fill="x", pady=(8, 0))
 
         body = tk.Frame(r, bg=C["bg"], padx=18, pady=16)
         body.pack(fill="both", expand=True)
@@ -179,11 +210,12 @@ class SorterApp(App):
         foot = tk.Frame(r, bg=C["panel"], padx=18, pady=10)
         foot.pack(fill="x", side="bottom")
         label(foot, f, "SAVES TO").pack(side="left")
-        self.dest_lbl = tk.Label(foot, text=short(self.cfg["beats_folder"], 52), bg=C["panel"], fg=C["text"],
+        self.dest_lbl = tk.Label(foot, text=short(self.dcfg()["beats_folder"], 52), bg=C["panel"], fg=C["text"],
                                  font=f.small, cursor="hand2")
         self.dest_lbl.pack(side="left", padx=(8, 0))
-        self.dest_lbl.bind("<Button-1>", lambda e: self.safe_open(self.cfg["beats_folder"], make=True))
-        for txt, cmd in (("settings", lambda: SettingsWindow(self)), ("log", lambda: self.safe_open(LOG_PATH))):
+        self.dest_lbl.bind("<Button-1>", lambda e: self.safe_open(self.dcfg()["beats_folder"], make=True))
+        for txt, cmd in (("settings", lambda: SettingsWindow(self, daw=self.daw)),
+                         ("log", lambda: self.safe_open(LOG_PATH))):
             ch = tk.Label(foot, text=txt, bg=C["panel"], fg=C["muted"], font=f.small, cursor="hand2")
             ch.pack(side="left", padx=(10, 0))
             ch.bind("<Button-1>", lambda e, c=cmd: c())
@@ -202,8 +234,9 @@ class SorterApp(App):
         except Exception:
             pass
 
-    def retheme(self):
-        super().retheme()
+    def retheme(self, force=False):
+        if not force:
+            super().retheme()
         if getattr(self, "zone", None) is None:
             return  # window not built yet
         for w in self.root.winfo_children():
@@ -254,7 +287,7 @@ class SorterApp(App):
         groups = group_files(files)
         for g in groups:
             try:
-                self.jobs.append(build_standalone_job(g, self.cfg))
+                self.jobs.append(build_standalone_job(g, daw_cfg(self.cfg, self.daw)))
             except Exception:
                 logging.exception("couldn't queue %s", g)
         logging.info("queued %d beats (%d files)", len(groups), len(files))
