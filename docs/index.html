@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FL Export Namer guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Barlow:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+/* VOICE: community-doc "bible" - practical, lowercase labels, dense but readable, honest about limits.
+   IDEA: a mirrored community guide doc - nested index on the left, dated edit heading, jump bar, "in this section".
+   PICTURE: the real export popup, large, with what each part means set beside it.
+   COLOUR and TYPE: FL Studio's own skin - charcoal #262626, playlist brown #342b2b, selection red #ff4e64; Barlow Semi Condensed like FL's UI, Barlow body.
+   LAYOUT: sticky header, sticky nested index (drawer on phones), one reading column with screenshots and tables. */
+:root{color-scheme:light dark;
+--bg:light-dark(#fbf9f9,#1f1d1d);--panel:light-dark(#f2eded,#262626);--side:light-dark(#f5f1f1,#1b1a1a);
+--ink:light-dark(#1d1718,#efe6e7);--muted:light-dark(#6d5f61,#a09091);--line:light-dark(#e3d9da,#3a3232);
+--accent:light-dark(#c81f3a,#ff4e64);--accent-ink:#fff;--soft:light-dark(#fbe7ea,#342b2b);--code:light-dark(#f1e9ea,#2e2525);
+--warn:light-dark(#9a5a00,#f3a35b)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+html{scroll-padding-top:72px;scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{margin:0;background:var(--bg);color:var(--ink);font:16.5px/1.6 Barlow,"Segoe UI",system-ui,sans-serif;overflow-x:clip}
+a{color:var(--accent);text-decoration-thickness:1px;text-underline-offset:2px}
+h1,h2,h3,.brand,.lbl{font-family:"Barlow Semi Condensed",Bahnschrift,"Arial Narrow",sans-serif}
+code,kbd,pre{font-family:ui-monospace,"Cascadia Mono",Consolas,monospace;font-size:.88em}
+code{background:var(--code);padding:1px 5px;border-radius:3px;overflow-wrap:anywhere}
+kbd{border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 6px;background:var(--panel)}
+pre{background:var(--code);padding:14px 16px;border-radius:6px;overflow-x:auto;line-height:1.5;border:1px solid var(--line)}
+
+header{position:sticky;top:0;z-index:20;height:56px;display:flex;align-items:center;gap:12px;padding:0 16px;
+  background:var(--panel);border-bottom:1px solid var(--line)}
+.burger{display:none;width:44px;height:44px;border:0;background:none;color:var(--ink);font-size:22px;cursor:pointer;border-radius:6px}
+.burger:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.brand{display:flex;align-items:center;gap:9px;font-weight:700;font-size:20px;color:var(--accent);text-decoration:none}
+.brand svg{flex:none}
+.ver{font-size:13px;color:var(--muted)}
+.dl{margin-left:auto;background:var(--accent);color:var(--accent-ink);text-decoration:none;font:600 14px "Barlow Semi Condensed",sans-serif;padding:7px 14px;border-radius:5px;white-space:nowrap}
+.dl:hover{filter:brightness(1.08)}
+
+.wrap{display:grid;grid-template-columns:270px minmax(0,1fr)}
+nav.side{position:sticky;top:56px;height:calc(100vh - 56px);overflow-y:auto;padding:22px 14px 40px 18px;
+  background:var(--side);border-right:1px solid var(--line);font-size:14.5px}
+.side .lbl{font-size:13px;font-weight:600;color:var(--muted);margin:0 0 8px}
+.side ul{list-style:none;margin:0;padding:0}
+.side li{margin:1px 0}
+.side a{display:block;padding:5px 8px;border-radius:4px;color:var(--ink);text-decoration:none;line-height:1.35}
+.side a:hover{background:var(--soft)}
+.side a.on{background:var(--accent);color:var(--accent-ink)}
+.side ul ul{margin:2px 0 6px 12px;border-left:1px solid var(--line);padding-left:6px}
+.side ul ul a{color:var(--muted);font-size:13.5px;padding:3px 8px}
+.side ul ul a.on{color:var(--accent-ink)}
+
+main{padding:28px clamp(16px,4vw,52px) 60px;max-width:860px}
+h1{font-size:clamp(34px,5vw,46px);line-height:1.05;margin:4px 0 14px;font-weight:700}
+h2{font-size:30px;line-height:1.1;margin:52px 0 12px;font-weight:700;padding-top:18px;border-top:1px solid var(--line)}
+h3{font-size:21px;margin:28px 0 8px;font-weight:600}
+p,li{max-width:70ch}
+.credits{color:var(--muted);font-size:15px;margin:0 0 14px}
+.credits b{color:var(--ink)}
+.syn{font-size:18px;line-height:1.55;margin:0 0 18px}
+.jump{display:flex;flex-wrap:wrap;gap:4px 0;font-size:15px;margin:16px 0 22px;padding:10px 0;border-block:1px solid var(--line)}
+.jump a{white-space:nowrap}
+.jump a:not(:last-child)::after{content:"|";color:var(--line);margin:0 9px;display:inline-block}
+
+.hero{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:22px;align-items:start;margin:8px 0 6px}
+figure{margin:0}
+.shot{display:block;width:100%;height:auto;border-radius:6px;border:1px solid var(--line);box-shadow:0 10px 30px rgb(0 0 0/.18)}
+figcaption{font-size:14px;color:var(--muted);margin-top:6px}
+.parts{margin:0;padding:0;list-style:none;font-size:15.5px}
+.parts li{display:grid;grid-template-columns:84px minmax(0,1fr);gap:8px;padding:8px 0;border-bottom:1px solid var(--line)}
+.parts b{font-family:"Barlow Semi Condensed",sans-serif;color:var(--accent);font-size:14px;letter-spacing:.02em;padding-top:2px}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:14px 0}
+
+.note,.warn{border-left:3px solid var(--accent);background:var(--soft);padding:10px 14px;border-radius:0 6px 6px 0;margin:14px 0}
+.warn{border-color:var(--warn)}
+.note p,.warn p{margin:0}
+.toc{columns:2;column-gap:30px;padding-left:20px}
+table{border-collapse:collapse;width:100%;margin:12px 0;font-size:15px}
+th,td{text-align:left;vertical-align:top;padding:8px 10px;border-bottom:1px solid var(--line)}
+th{font-family:"Barlow Semi Condensed",sans-serif;font-weight:600;color:var(--muted);font-size:14px}
+td:first-child{white-space:nowrap;font-weight:600}
+ol.steps{padding-left:22px}ol.steps li{margin:6px 0}
+dl.qa dt{font-weight:600;margin-top:16px}
+dl.qa dd{margin:4px 0 0 0;color:var(--ink)}
+footer{border-top:1px solid var(--line);margin-top:56px;padding-top:16px;color:var(--muted);font-size:14px;display:flex;flex-wrap:wrap;gap:8px 18px}
+
+@media (max-width:900px){
+  .wrap{grid-template-columns:minmax(0,1fr)}
+  .burger{display:block}
+  nav.side{position:fixed;top:56px;left:0;width:min(300px,86vw);z-index:15;transform:translateX(-102%);transition:transform .2s;box-shadow:8px 0 30px rgb(0 0 0/.25)}
+  body.open nav.side{transform:none}
+  .hero{grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width:600px){
+  .pair{grid-template-columns:minmax(0,1fr)}
+  .toc{columns:1}
+  .ver,.g{display:none}.brand{font-size:18px;white-space:nowrap}
+  table{font-size:13.5px}
+  .stack thead{display:none}.stack tr{display:grid;padding-block:10px;border-bottom:1px solid var(--line)}
+  .stack td{display:flow-root;border:0;padding:3px 0;padding-inline-start:7.5em;text-align:start;white-space:normal}
+  .stack td::before{content:attr(data-l);float:inline-start;width:7em;margin-inline-start:-7.5em;color:var(--muted);font-weight:600}
+  .stack td:empty{display:none}
+}
+</style>
+</head>
+<body>
+<header>
+  <button class="burger" id="burger" aria-label="Show index" aria-expanded="false">☰</button>
+  <a class="brand" href="#top">
+    <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="1" y="1" width="20" height="20" rx="4" fill="#1d1d1d" stroke="#ff4e64" stroke-width="1.5"/><g fill="#ff4e64"><rect x="4.5" y="11" width="2" height="6"/><rect x="7.6" y="7" width="2" height="10"/><rect x="10.7" y="5" width="2" height="12"/><rect x="13.8" y="9" width="2" height="8"/><rect x="16.9" y="7.5" width="1.6" height="9.5"/></g></svg>
+    <span>FL Export Namer<span class="g"> guide</span></span>
+  </a>
+  <a class="dl" href="https://github.com/jay-xls/fl-export-namer/releases/latest">download</a><span class="ver">v1.2.0 · windows</span>
+</header>
+
+<div class="wrap">
+<nav class="side" id="side" aria-label="Index">
+  <p class="lbl">index</p>
+  <ul>
+    <li><a href="#top">edit. 24.11.26</a></li>
+    <li><a href="#install">install</a>
+      <ul><li><a href="#setup-exe">setup.exe</a></li><li><a href="#zip">zip version</a></li><li><a href="#smartscreen">"windows protected your pc"</a></li></ul></li>
+    <li><a href="#first-run">first run</a></li>
+    <li><a href="#exporting">exporting from FL</a></li>
+    <li><a href="#popup">the popup</a>
+      <ul><li><a href="#fields">where each field comes from</a></li><li><a href="#keys">buttons + keys</a></li></ul></li>
+    <li><a href="#files">where files go</a>
+      <ul><li><a href="#versions">versions + dated folders</a></li><li><a href="#stems">stems + multi-format</a></li></ul></li>
+    <li><a href="#sorter">beat sorter (old exports)</a>
+      <ul><li><a href="#sorter-use">using it</a></li><li><a href="#sorter-hints">what it reads from file names</a></li></ul></li>
+    <li><a href="#tray">tray menu</a></li>
+    <li><a href="#settings">settings</a></li>
+    <li><a href="#format">name format</a></li>
+    <li><a href="#accuracy">how accurate is it</a></li>
+    <li><a href="#trouble">troubleshooting</a></li>
+    <li><a href="#uninstall">files, updates + uninstall</a></li>
+    <li><a href="#changelog">changelog</a></li>
+  </ul>
+</nav>
+
+<main id="top">
+  <h1>edit. 24.11.26</h1>
+  <p class="credits"><b>FL Export Namer v1.2.0</b>, made by <b>Jay</b>. Windows 10/11 · no Python needed · works with FL Studio project folders · free, share it with whoever.<br>
+  <a href="https://github.com/jay-xls/fl-export-namer/releases/latest">download</a> · <a href="https://github.com/jay-xls/fl-export-namer/issues/new/choose">report a bug / suggest a feature</a> · <a href="https://github.com/jay-xls/fl-export-namer">source on GitHub</a></p>
+  <p class="syn">A small Windows app that watches your FL Studio projects folder. When you export a beat, it pops up with the name, BPM, key and next version number already filled in. Hit Enter and the file is renamed and filed into one tidy beats folder. It comes with <b>Beat Sorter</b> for the pile of old, randomly named exports: drop them in, and it works out the BPM and key from the audio.</p>
+
+  <div class="jump" aria-label="Jump to">
+    <a href="#install">install</a><a href="#first-run">first run</a><a href="#exporting">exporting</a><a href="#popup">the popup</a><a href="#files">where files go</a><a href="#sorter">beat sorter</a><a href="#tray">tray menu</a><a href="#settings">settings</a><a href="#format">name format</a><a href="#accuracy">accuracy</a><a href="#trouble">troubleshooting</a><a href="#uninstall">uninstall</a>
+  </div>
+
+  <div class="hero">
+    <figure>
+      <img class="shot" src="img/popup.png" width="580" height="558" alt="The export popup: name Nightdrive, BPM 140 read from project, key Fm detected with Ab and Cm as alternatives, version 1, saving as Nightdrive_140bpm_Fm_v01.wav plus mp3">
+      <figcaption>what you see a few seconds after exporting from FL</figcaption>
+    </figure>
+    <ul class="parts">
+      <li><b>EXPORT</b><span>the file(s) FL just rendered. WAV and MP3 rendered together count as one.</span></li>
+      <li><b>NAME</b><span>from your project (or what you called it last time).</span></li>
+      <li><b>BPM</b><span>read straight out of the saved .flp, not guessed.</span></li>
+      <li><b>KEY</b><span>detected from the audio. The red chips are the top 3 guesses; click one to swap.</span></li>
+      <li><b>VERSION</b><span>the next free number for that beat.</span></li>
+      <li><b>SAVES AS</b><span>the exact file name and folder it'll go to. Updates as you type.</span></li>
+    </ul>
+  </div>
+
+  <p class="lbl" style="margin:26px 0 4px;font-weight:600;color:var(--muted)">in this section</p>
+  <ul class="toc">
+    <li><a href="#install">install</a></li><li><a href="#first-run">first run</a></li><li><a href="#exporting">exporting from FL</a></li>
+    <li><a href="#popup">the popup</a></li><li><a href="#files">where files go</a></li><li><a href="#sorter">beat sorter</a></li>
+    <li><a href="#tray">tray menu</a></li><li><a href="#settings">settings</a></li><li><a href="#format">name format</a></li>
+    <li><a href="#accuracy">how accurate is it</a></li><li><a href="#trouble">troubleshooting</a></li><li><a href="#uninstall">files, updates + uninstall</a></li>
+  </ul>
+
+  <h2 id="install">install</h2>
+  <h3 id="setup-exe">setup.exe (recommended)</h3>
+  <ol class="steps">
+    <li>Download <code>FL Export Namer Setup x.y.z.exe</code> from the <a href="https://github.com/jay-xls/fl-export-namer/releases/latest">latest release</a> and run it. It installs for your Windows user only, so there's no admin prompt.</li>
+    <li>Leave both options ticked: <b>start the export watcher with Windows</b> and <b>Beat Sorter shortcut on the desktop</b>.</li>
+    <li>Finish with "start the export watcher now" ticked. The setup window opens (see <a href="#first-run">first run</a>).</li>
+  </ol>
+  <p>You get Start menu entries for <b>FL Export Namer</b> (the watcher) and <b>Beat Sorter</b>, plus the desktop shortcut.</p>
+  <h3 id="zip">zip version</h3>
+  <p>Grab the <code>.zip</code> from the <a href="https://github.com/jay-xls/fl-export-namer/releases/latest">same release page</a> and unzip it somewhere permanent, e.g. <code>Documents\Apps</code>, not Downloads. Run <code>FL Export Namer.exe</code>. Beat Sorter is the same exe with <code>--sorter</code> on the end. To get a Beat Sorter shortcut: right-click the exe → <i>Create shortcut</i> → shortcut Properties → add <code>&nbsp;--sorter</code> after the quotes in <b>Target</b>. To start it with Windows, use the toggle in <a href="#settings">settings</a>.</p>
+  <h3 id="smartscreen">"windows protected your pc"</h3>
+  <div class="warn"><p>The app isn't code-signed (that costs money every year), so Windows doesn't recognise the publisher. Click <b>More info</b> → <b>Run anyway</b>. Some antivirus tools also flag apps built this way (PyInstaller) by mistake. If yours quarantines it, restore it and add an exception, or skip it if you don't trust the source you got it from. Each release lists SHA256 checksums, so you can confirm your download matches what was built.</p></div>
+
+  <h2 id="first-run">first run</h2>
+  <p>A setup window asks for two folders:</p>
+  <table class="stack"><thead><tr><th>setting</th><th>what to pick</th><th>default</th></tr></thead><tbody>
+    <tr><td>watch folder</td><td>where FL saves your projects. Every subfolder is watched.</td><td><code>Documents\Image-Line\FL Studio\Projects</code></td></tr>
+    <tr><td>beats folder</td><td>where finished, named exports should end up. Created on first save.</td><td><code>Music\FL Export</code></td></tr>
+  </tbody></table>
+  <p>Hit <b>START WATCHING</b>. From then on it lives in the system tray: the red bars icon, bottom right. Check the <kbd>^</kbd> overflow arrow if you can't see it. Drag it onto the taskbar to keep it visible.</p>
+
+  <h2 id="exporting">exporting from FL</h2>
+  <ol class="steps">
+    <li>Export as normal (<i>File → Export</i>) and save into the project's own folder, which is FL's default when the project has one.</li>
+    <li>Wait for the render to finish. The popup appears about 5 seconds later. It waits until the file has stopped growing, then a moment longer to catch an MP3 rendered alongside.</li>
+    <li>Check it, press <kbd>Enter</kbd>. A toast in the corner confirms where it went, with an "open folder" link.</li>
+  </ol>
+  <div class="note"><p><b>save the project before exporting</b> if you changed the tempo. BPM comes from the saved .flp, so an unsaved tempo change gives you the old number. The popup warns you in amber if the project was last saved more than 2 minutes before the export.</p></div>
+  <p>Ignored on purpose: anything rendered <i>outside</i> the watch folder, anything already inside the beats folder, and subfolders named <code>Backup</code>, <code>Recorded</code>, <code>Audio</code>, <code>Sliced</code>, <code>Audio Logger</code>, <code>Autosave</code> or <code>Samples</code>. That stops recordings and backups from triggering popups.</p>
+
+  <h2 id="popup">the popup</h2>
+  <h3 id="fields">where each field comes from</h3>
+  <table class="stack"><thead><tr><th>field</th><th>filled from (first match wins)</th><th>amber hint means</th></tr></thead><tbody>
+    <tr><td>name</td><td>what you saved this project as last time → project name if it's already in your format → Project Info title → .flp file name with junk removed (<code>_2</code>, <code>140bpm</code>, <code>(autosave)</code>)</td><td>FL's auto-name like <code>Project_23</code>. It's pre-selected, so just type over it.</td></tr>
+    <tr><td>bpm</td><td>the saved project's tempo</td><td>no tempo saved (FL default 140), couldn't read it, or the project's older than the export</td></tr>
+    <tr><td>key</td><td>what you used last time for this project → detected from the audio. Top 3 as chips, <b>▾</b> lists all 24 keys.</td><td>the detector's unsure. Check it.</td></tr>
+    <tr><td>version</td><td>highest existing version of that beat in your beats folder + 1. Recalculates if you change the name.</td><td>-</td></tr>
+  </tbody></table>
+  <p>Once you've saved a beat, its name and key are remembered for that project, so the next export of it is usually one <kbd>Enter</kbd>.</p>
+  <h3 id="keys">buttons + keys</h3>
+  <table><thead><tr><th>do</th><th>how</th></tr></thead><tbody>
+    <tr><td>save</td><td><kbd>Enter</kbd> or <b>SAVE</b></td></tr>
+    <tr><td>skip (file left alone)</td><td><kbd>Esc</kbd>, <b>SKIP</b> or ✕</td></tr>
+    <tr><td>nudge bpm / version</td><td>the <b>−</b> <b>+</b> buttons</td></tr>
+    <tr><td>copy instead of move</td><td>tick <b>keep original in project folder</b></td></tr>
+    <tr><td>never ask about a folder again</td><td><b>ignore this folder</b></td></tr>
+    <tr><td>move the popup</td><td>drag its title bar</td></tr>
+  </tbody></table>
+  <p>Export several things in a row and they queue up. The title bar shows <b>+2 waiting</b>.</p>
+
+  <h2 id="files">where files go</h2>
+<pre>Music\FL Export\
+  Nightdrive 24.11.2026\
+    Nightdrive_140bpm_Fm_v01.wav
+    Nightdrive_140bpm_Fm_v01.mp3
+    Nightdrive_140bpm_Fm_v02.wav
+    Nightdrive_140bpm_Fm_v03_stems\
+      Nightdrive_140bpm_Fm_v03_Kick.wav
+      Nightdrive_140bpm_Fm_v03_808.wav
+  Dusty Loop 09.06.2024\
+    Dusty Loop_90bpm_Fm_v01.wav</pre>
+  <h3 id="versions">versions + dated folders</h3>
+  <p>Each beat gets its own folder named <b>name + DD.MM.YYYY</b>. The date is the day of its <i>first</i> export. Later versions go into the same folder whatever the date, so v04 next month still sits next to v01–v03. Versions are counted per beat name, across BPM/key changes. If a file name already exists, the new one gets <code>(2)</code> on the end. Nothing is ever overwritten.</p>
+  <h3 id="stems">stems + multi-format</h3>
+  <p>WAV + MP3 (or any mix of formats) from one render = one version, same name, different extensions. <i>Split mixer tracks</i> renders go into a <code>…_stems</code> folder, each file keeping its track name.</p>
+  <p>Changed your mind? Tray icon → <b>Undo last rename</b> puts the files back.</p>
+
+  <h2 id="sorter">beat sorter (old exports)</h2>
+  <p>For everything you exported <i>before</i> installing this: random names, no project folder, BPM and key unknown. Same popup, same naming and folders, but it works everything out from the audio itself.</p>
+  <div class="pair">
+    <figure><img class="shot" src="img/sorter.png" width="600" height="560" alt="Beat Sorter window with a large drop zone, a recent list of sorted files and the destination folder in the footer"><figcaption>the drop window</figcaption></figure>
+    <figure><img class="shot" src="img/sorter-popup.png" width="580" height="558" alt="Beat Sorter popup for 'dark trap 140 bpm Am final (1).wav': name cleaned to dark trap, BPM 140 from the file name with estimates 140, 93.5 and 70, key Am from the file name"><figcaption>an old file: name cleaned up, bpm + key read from the file name, audio estimates beside them</figcaption></figure>
+  </div>
+  <h3 id="sorter-use">using it</h3>
+  <ul>
+    <li>Open it from the desktop shortcut, the Start menu, or tray → <b>Open Beat Sorter</b>.</li>
+    <li>Drop files <i>or whole folders</i> onto the window, or straight onto the desktop shortcut. Subfolders are included. Click the drop zone to browse instead.</li>
+    <li>Each beat gets the popup. <b>BPM</b> is estimated from the audio with the top 3 as chips. The half/double-time option (70 vs 140) is always one of them.</li>
+    <li>The folder date is the old file's own date, i.e. roughly when you made it, not today.</li>
+    <li><b>keep originals</b> (bottom right) copies instead of moving. <b>Turn it on for your first big batch</b>, check the results, then delete the old copies yourself.</li>
+    <li><b>undo last</b>, <b>clear queue</b>, <b>settings</b> and <b>log</b> are all in the window. Drop more files any time and they join the queue.</li>
+  </ul>
+  <h3 id="sorter-hints">what it reads from file names</h3>
+  <table class="stack"><thead><tr><th>in the name</th><th>becomes</th><th>example</th></tr></thead><tbody>
+    <tr><td>bpm</td><td>BPM, with the audio estimate shown beside it</td><td><code>140bpm</code>, <code>140 BPM</code></td></tr>
+    <tr><td>key</td><td>key, only with a quality, so a stray capital letter isn't mistaken for one</td><td><code>Am</code>, <code>C# minor</code>, <code>F#maj</code></td></tr>
+    <tr><td>junk</td><td>removed from the name</td><td><code>final</code>, <code>mixdown</code>, <code>master</code>, <code>bounce</code>, <code>(1)</code>, <code>_v2</code></td></tr>
+  </tbody></table>
+  <p><code>dark trap 140 bpm Am final (1).wav</code> → name <b>dark trap</b>, 140 BPM, Am.</p>
+
+  <h2 id="tray">tray menu</h2>
+  <p>Right-click the red bars icon:</p>
+  <table><thead><tr><th>item</th><th>does</th></tr></thead><tbody>
+    <tr><td>open beats folder</td><td>opens your beats folder (also what a left-click does)</td></tr>
+    <tr><td>open beat sorter</td><td>opens the drop window</td></tr>
+    <tr><td>undo last rename</td><td>moves the last saved file(s) back where they were</td></tr>
+    <tr><td>pause watching</td><td>exports are left alone until you untick it</td></tr>
+    <tr><td>settings…</td><td>see below</td></tr>
+    <tr><td>open log</td><td>what it saw, skipped (with the reason) and did. Send this if something's off.</td></tr>
+    <tr><td>quit</td><td>stops watching until next launch / restart</td></tr>
+  </tbody></table>
+
+  <h2 id="settings">settings</h2>
+  <figure style="margin:12px 0"><img class="shot" src="img/settings.png" width="702" height="556" alt="Settings window: watch and beats folders, name format with example, key style, accidentals, default move or copy, toggles for subfolder per beat, date on beat folders, detect key, start with Windows, and the ignore list"></figure>
+  <table class="stack"><thead><tr><th>setting</th><th>what it does</th></tr></thead><tbody>
+    <tr><td>watch folder</td><td>FL projects root. Changing it restarts watching straight away.</td></tr>
+    <tr><td>beats folder</td><td>where named exports go</td></tr>
+    <tr><td>name format</td><td>file name pattern, see <a href="#format">name format</a>. Live example underneath.</td></tr>
+    <tr><td>key style</td><td><code>Fm / F</code> or <code>Fmin / Fmaj</code></td></tr>
+    <tr><td>accidentals</td><td>mixed (<code>C# Eb F# Ab Bb</code>, the usual producer mix), all sharps, or all flats</td></tr>
+    <tr><td>default</td><td>move to beats folder, or copy and keep the original</td></tr>
+    <tr><td>subfolder per beat</td><td>off = every file straight into the beats folder</td></tr>
+    <tr><td>date on beat folders</td><td>the <code>DD.MM.YYYY</code> on folder names</td></tr>
+    <tr><td>detect key from audio</td><td>off = key box starts empty unless remembered</td></tr>
+    <tr><td>check for updates</td><td>once a day, asks GitHub if there's a newer version and shows a toast if so. Nothing else is sent.</td></tr>
+    <tr><td>start with windows</td><td>launches the watcher at login</td></tr>
+    <tr><td>ignore</td><td>subfolder names that never trigger a popup, comma-separated</td></tr>
+  </tbody></table>
+  <p>Your version number is shown bottom-left of the settings window.</p>
+
+  <h2 id="format">name format</h2>
+  <p>Default: <code>{name}_{bpm}bpm_{key}_v{version}</code>. Must contain <code>{name}</code> and <code>{version}</code>.</p>
+  <table><thead><tr><th>token</th><th>becomes</th></tr></thead><tbody>
+    <tr><td><code>{name}</code></td><td>beat name</td></tr>
+    <tr><td><code>{bpm}</code></td><td><code>140</code>, or <code>92.5</code> when it isn't whole</td></tr>
+    <tr><td><code>{key}</code></td><td><code>Fm</code>, <code>C#</code>… per key style</td></tr>
+    <tr><td><code>{version}</code></td><td><code>03</code> (2 digits)</td></tr>
+    <tr><td><code>{date}</code></td><td>today, <code>2026-11-24</code></td></tr>
+  </tbody></table>
+  <p>An empty field disappears with its separator. No key gives <code>Nightdrive_140bpm_v01</code>, not <code>Nightdrive_140bpm__v01</code>. Another layout: <code>{name} - {key} - {bpm} BPM (v{version})</code> → <code>Nightdrive - Fm - 140 BPM (v03)</code>.</p>
+
+  <h2 id="accuracy">how accurate is it</h2>
+  <table class="stack"><thead><tr><th>thing</th><th>how good</th><th>usual mistake</th></tr></thead><tbody>
+    <tr><td>bpm (watcher)</td><td>exact. It's read from the project, not guessed.</td><td>stale if you didn't save after changing tempo. Tempo automation: you get the starting tempo.</td></tr>
+    <tr><td>bpm (beat sorter)</td><td>on 16 test beats: right first time 14/16, right answer in the 3 chips 16/16. About a second per beat.</td><td>half/double time (75 read as 150, 160 as 80). Swung, sparse or drumless tracks are weaker.</td></tr>
+    <tr><td>key</td><td>a best guess. On test beats 5/6 when BPM is known.</td><td>picking the relative major/minor (Fm vs Ab). That's why the alternatives are one click away.</td></tr>
+  </tbody></table>
+  <p>The test beats were synthetic, so real-world numbers will be somewhat lower. The app never saves anything you haven't looked at. Every value goes through the popup first.</p>
+
+  <h2 id="trouble">troubleshooting</h2>
+  <dl class="qa">
+    <dt>I exported and nothing popped up</dt>
+    <dd>Check the folder in FL's save dialog. It often remembers the last place you used (Desktop, an old export folder), which may be outside the watch folder. Also check the tray icon isn't on <b>pause</b>. Then open the log: each export shows as <code>seen …</code>, or <code>skipped … (reason)</code>, e.g. <i>inside ignored subfolder 'Audio'</i>.</dd>
+    <dt>popups for recordings or bounced samples</dt>
+    <dd>Click <b>ignore this folder</b> in the popup, or add the subfolder's name to <b>ignore</b> in settings.</dd>
+    <dt>BPM is wrong</dt>
+    <dd>Save the project, then export again. If the box is amber and empty, the project file couldn't be read, possibly after an FL update changed the file format. Type it in and send the log.</dd>
+    <dt>key is wrong</dt>
+    <dd>Click the right chip or pick from <b>▾</b>. It's remembered for that project from then on.</dd>
+    <dt>drag and drop doesn't work in beat sorter</dt>
+    <dd>Click the drop zone to browse instead, or drop onto the desktop shortcut. If the drop zone says drag-and-drop is unavailable, reinstall.</dd>
+    <dt>"couldn't save" toast</dt>
+    <dd>Something still has the file open, usually FL itself or a media player. It retries for 10 seconds. Close the other program and press save again.</dd>
+    <dt>"already named and filed - nothing to do"</dt>
+    <dd>That file is already exactly where and what it would be renamed to.</dd>
+    <dt>still stuck?</dt>
+    <dd><a href="https://github.com/jay-xls/fl-export-namer/issues/new/choose">Open a bug report</a> and attach your log. It's the fastest way to get it fixed.</dd>
+    <dt>it starts twice / two tray icons</dt>
+    <dd>It can't. A second launch quietly exits. A second Beat Sorter hands its files to the open window.</dd>
+  </dl>
+
+  <h2 id="uninstall">files, updates + uninstall</h2>
+  <ul>
+    <li>Settings, per-project memory and the log live in <code>%APPDATA%\FL Export Namer\</code>: <code>config.json</code>, <code>state.json</code>, <code>log.txt</code>.</li>
+    <li><b>Update:</b> when a toast says a new version is out, click <b>download the update</b> (or check the <a href="https://github.com/jay-xls/fl-export-namer/releases/latest">releases page</a>) and run the new Setup over the top. Your settings are kept.</li>
+    <li><b>Uninstall:</b> Windows Settings → Apps → FL Export Namer → Uninstall. Your settings folder is kept in case you reinstall. Delete it to wipe everything.</li>
+    <li>Your beats are never touched by uninstalling.</li>
+  </ul>
+
+  <h2 id="changelog">changelog</h2>
+  <p>Every version's notes are on the <a href="https://github.com/jay-xls/fl-export-namer/releases">releases page</a> (full history in <a href="https://github.com/jay-xls/fl-export-namer/blob/main/CHANGELOG.md">CHANGELOG.md</a>). Latest:</p>
+  <h3>1.2.0 · 24.11.26</h3>
+  <ul>
+    <li>Update check: a toast tells you when a new version is out. Turn it off in settings.</li>
+    <li>Builds now come from GitHub, tested automatically, with checksums.</li>
+  </ul>
+
+  <footer>
+    <a href="#top">Full table of contents ↑</a>
+    <span>last edit 24.11.26 · 13 sections · v1.2.0</span>
+  </footer>
+</main>
+</div>
+
+<script>
+{
+  const body = document.body, burger = document.getElementById('burger'), side = document.getElementById('side');
+  const setOpen = on => { body.classList.toggle('open', on); burger.setAttribute('aria-expanded', on); };
+  burger.addEventListener('click', () => setOpen(!body.classList.contains('open')));
+  side.addEventListener('click', e => { if (e.target.closest('a')) setOpen(false); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') setOpen(false); });
+
+  // highlight the section you're reading in the index
+  const links = [...side.querySelectorAll('a[href^="#"]')];
+  const byId = new Map(links.map(a => [a.getAttribute('href').slice(1), a]));
+  const targets = [...document.querySelectorAll('main h2[id], main h3[id]')];
+  let current = null;
+  const mark = id => {
+    if (id === current) return;
+    current = id;
+    links.forEach(a => a.classList.remove('on'));
+    const a = byId.get(id);
+    if (a) { a.classList.add('on'); a.scrollIntoView({block: 'nearest'}); }
+  };
+  const spy = new IntersectionObserver(entries => {
+    const vis = entries.filter(e => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+    if (vis.length) mark(vis[0].target.id);
+  }, {rootMargin: '-70px 0px -65% 0px'});
+  targets.forEach(t => spy.observe(t));
+  mark('top');
+}
+</script>
+</body>
+</html>

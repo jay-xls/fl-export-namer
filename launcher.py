@@ -1,0 +1,76 @@
+"""Entry point for the packaged app.
+
+    FL Export Namer.exe            -> watcher (system tray)
+    FL Export Namer.exe --sorter   -> Beat Sorter window (files/folders can follow)
+"""
+import sys
+
+
+def selftest() -> int:
+    """Run inside the built exe: proves every bundled piece actually loads."""
+    import tempfile
+    import traceback
+    from pathlib import Path
+    import numpy as np
+    import namer_core
+    out, ok = [f"FL Export Namer v{namer_core.__version__} selftest"], True
+
+    def check(name, fn):
+        nonlocal ok
+        try:
+            out.append(f"  OK    {name}: {fn() or ''}")
+        except Exception as e:
+            ok = False
+            out.append(f"  FAIL  {name}: {type(e).__name__}: {e}")
+            out.append(traceback.format_exc())
+
+    def dnd():
+        from tkinterdnd2 import TkinterDnD
+        root = TkinterDnD.Tk()
+        root.withdraw()
+        v = root.tk.call("package", "require", "tkdnd")
+        root.destroy()
+        return f"tkdnd {v}"
+
+    def audio():
+        import soundfile as sf
+        from bpm_detect import estimate_bpm
+        from key_detect import detect_key
+        sr, bpm = 44100, 120.0
+        t = np.arange(int(sr * 16)) / sr
+        y = 0.1 * np.sin(2 * np.pi * 220 * t)          # A3 drone
+        beat = int(sr * 60 / bpm)
+        for i in range(0, len(y) - 4000, beat):         # clicks on every beat
+            y[i:i + 4000] += 0.6 * np.exp(-np.arange(4000) / 300) * np.sin(2 * np.pi * 60 * np.arange(4000) / sr)
+        p = Path(tempfile.gettempdir()) / "fl_export_namer_selftest.wav"
+        sf.write(p, y, sr)
+        b = estimate_bpm(str(p))
+        k = detect_key(str(p), bpm=b[0][0] if b else None)
+        p.unlink()
+        return f"libsndfile {sf.__libsndfile_version__}, bpm {b[0][0] if b else None}, key {k[0][0] if k else None}"
+
+    check("drag and drop", dnd)
+    check("audio + detection", audio)
+    if sys.platform.startswith("win"):  # Linux/macOS tray backends differ; the app runs without one there
+        check("tray icon", lambda: __import__("pystray").Icon.__module__)
+    check("folder watching", lambda: __import__("watchdog.observers", fromlist=["Observer"]).Observer.__name__)
+    check("project reader", lambda: __import__("flp_reader").read_flp.__name__)
+    namer_core.APPDIR.mkdir(parents=True, exist_ok=True)
+    (namer_core.APPDIR / "selftest.txt").write_text("\n".join(out) + "\n" + ("ALL OK" if ok else "FAILED") + "\n",
+                                                   encoding="utf-8")
+    return 0 if ok else 1
+
+
+def run():
+    if "--selftest" in sys.argv:
+        sys.exit(selftest())
+    if "--sorter" in sys.argv:
+        sys.argv.remove("--sorter")
+        from sorter_app import main
+    else:
+        from namer_core import main
+    main()
+
+
+if __name__ == "__main__":
+    run()

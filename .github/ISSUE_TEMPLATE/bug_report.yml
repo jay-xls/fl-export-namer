@@ -1,0 +1,44 @@
+name: Bug report
+description: Something isn't working right
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: "Thanks! The log file is the most useful thing you can attach: tray icon -> **Open log** (or `%APPDATA%\\FL Export Namer\\log.txt`)."
+  - type: input
+    id: version
+    attributes:
+      label: App version
+      description: Shown bottom-left in Settings, e.g. 1.2.0
+    validations:
+      required: true
+  - type: dropdown
+    id: part
+    attributes:
+      label: Which part?
+      options: [Export watcher (popup after exporting from FL), Beat Sorter, Installer / startup, Settings, Something else]
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+      placeholder: "I exported a beat into my project folder and no popup appeared..."
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to make it happen again
+      placeholder: "1. ...\n2. ...\n3. ..."
+  - type: textarea
+    id: log
+    attributes:
+      label: Log
+      description: Paste the last ~30 lines of log.txt, or drag the file in.
+      render: text
+  - type: input
+    id: fl
+    attributes:
+      label: FL Studio version (if relevant)
+      placeholder: "FL Studio 2026.1"

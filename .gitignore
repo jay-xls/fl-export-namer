@@ -1,0 +1,14 @@
+# build output
+dist/
+build/
+.venv*/
+*.spec.bak
+# python
+__pycache__/
+*.pyc
+.pytest_cache/
+# local junk
+*.log
+Thumbs.db
+desktop.ini
+.DS_Store

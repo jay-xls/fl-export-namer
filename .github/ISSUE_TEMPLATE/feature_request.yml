@@ -1,0 +1,21 @@
+name: Feature idea
+description: Suggest something new or better
+labels: [enhancement]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: What should it do?
+      description: Describe it from your side - what you'd do, and what you'd see.
+      placeholder: "When I export stems, also make a zip of the stems folder so I can send it in one go."
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why / when would you use it?
+  - type: textarea
+    id: example
+    attributes:
+      label: Example
+      description: A file name, folder layout or screenshot of what the result should look like.

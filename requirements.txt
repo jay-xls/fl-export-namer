@@ -1,0 +1,8 @@
+# Runtime libraries bundled into the app. Pinned = every build is reproducible.
+# Bump deliberately (one at a time) and let CI + the selftest confirm nothing broke.
+watchdog==7.1.1
+numpy==2.5.5
+soundfile==0.14.0
+pystray==0.19.5
+pillow==13.0.0
+tkinterdnd2==0.7.0
