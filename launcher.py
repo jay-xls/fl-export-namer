@@ -55,6 +55,13 @@ def selftest() -> int:
         check("tray icon", lambda: __import__("pystray").Icon.__module__)
     check("folder watching", lambda: __import__("watchdog.observers", fromlist=["Observer"]).Observer.__name__)
     check("project reader", lambda: __import__("flp_reader").read_flp.__name__)
+
+    def themes():
+        import theme
+        from PIL import ImageGrab, ImageTk  # eyedropper
+        pal, status, _ = theme.resolve({"theme": "auto"})
+        return f"{status}, accent {pal['accent']}, {ImageGrab.__name__}, {ImageTk.__name__}"
+    check("themes + eyedropper", themes)
     namer_core.APPDIR.mkdir(parents=True, exist_ok=True)
     (namer_core.APPDIR / "selftest.txt").write_text("\n".join(out) + "\n" + ("ALL OK" if ok else "FAILED") + "\n",
                                                    encoding="utf-8")

@@ -33,9 +33,10 @@ from tkinter import filedialog, font as tkfont  # noqa: E402
 
 from flp_reader import FlpInfo, read_flp  # noqa: E402
 import naming  # noqa: E402
+import theme  # noqa: E402
 
 APP = "FL Export Namer"
-__version__ = "1.2.0"
+__version__ = "1.3.0"
 # GitHub repo releases are published to (owner/name). Used by the update check.
 UPDATE_REPO = "jay-xls/fl-export-namer"
 FROZEN = getattr(sys, "frozen", False)  # running from the PyInstaller build
@@ -70,26 +71,16 @@ DEFAULT_CONFIG = {
     "settle_seconds": 1.5,
     "group_seconds": 3.0,
     "stale_warning_minutes": 2,
+    "theme": "auto",             # auto = match FL Studio's current theme, default, file, custom
+    "theme_file": "",            # .flstheme used when theme = file
+    "theme_colors": {},          # seed colours used when theme = custom (see theme.SEEDS)
 }
 
 # ---------------------------------------------------------------- theme ----
-# Sampled from your FL Studio screenshot.
-C = {
-    "bg": "#262626",        # main panels
-    "panel": "#1d1d1d",     # menu bar / title bar
-    "field": "#2e2525",     # playlist brown
-    "field_hi": "#342b2b",
-    "deep": "#120909",
-    "border": "#3d3232",
-    "accent": "#ff4e64",    # selected row / titles
-    "accent_hot": "#ff6b7e",
-    "accent_dim": "#a05555",  # playlist ruler
-    "red_text": "#e94745",  # browser text
-    "text": "#f1e4e5",
-    "muted": "#8c7b7c",
-    "warn": "#f3a35b",
-    "ok": "#7fd18b",
-}
+# Live palette. Starts as FL Studio's stock look; App.apply_theme() swaps the values in
+# place (FL theme sync, a .flstheme file, or custom colours - see theme.py), so every
+# module that imported C sees the change. Windows built afterwards use the new colours.
+C = dict(theme.FL_DEFAULT)
 
 
 def pick_font(root, prefs, size, weight="normal"):
@@ -213,6 +204,7 @@ def launch_sorter(paths=()):
 
 # ----------------------------------------------------------- update check ----
 UPDATE_EVERY_HOURS = 20
+THEME_POLL_MS = 4000
 
 
 def open_url(url: str):
@@ -546,7 +538,7 @@ class FlatButton(tk.Label):
         self.primary = primary
         self.cmd = command
         bg = C["accent"] if primary else C["field"]
-        fg = "#ffffff" if primary else C["red_text"]
+        fg = C["on_accent"] if primary else C["btn_text"]
         super().__init__(master, text=text, bg=bg, fg=fg, font=fonts.button,
                          padx=16, pady=7, cursor="hand2", **kw)
         self.bind("<Enter>", lambda e: self.config(bg=C["accent_hot"] if primary else C["field_hi"]))
@@ -558,14 +550,14 @@ def flat_entry(master, fonts, width=10, textvariable=None):
     return tk.Entry(master, width=width, textvariable=textvariable, bg=C["field"], fg=C["text"],
                     insertbackground=C["accent"], relief="flat", font=fonts.entry,
                     highlightthickness=1, highlightbackground=C["border"], highlightcolor=C["accent"],
-                    selectbackground=C["accent"], selectforeground="#ffffff",
+                    selectbackground=C["accent"], selectforeground=C["on_accent"],
                     disabledbackground=C["field"])
 
 
 class Segmented(tk.Frame):
-    def __init__(self, master, fonts, options, value):
+    def __init__(self, master, fonts, options, value, command=None):
         super().__init__(master, bg=C["border"], padx=1, pady=1)
-        self.value = value
+        self.value, self.command = value, None
         self.labels = {}
         for i, (val, text) in enumerate(options):
             lb = tk.Label(self, text=text, font=fonts.small, padx=10, pady=4, cursor="hand2")
@@ -573,12 +565,15 @@ class Segmented(tk.Frame):
             lb.bind("<Button-1>", lambda e, v=val: self.set(v))
             self.labels[val] = lb
         self.set(value.get())
+        self.command = command
 
     def set(self, v):
         self.value.set(v)
         for val, lb in self.labels.items():
             on = val == v
-            lb.config(bg=C["accent"] if on else C["field"], fg="#ffffff" if on else C["muted"])
+            lb.config(bg=C["accent"] if on else C["field"], fg=C["on_accent"] if on else C["muted"])
+        if self.command:
+            self.command()
 
 
 class Toggle(tk.Label):
@@ -625,7 +620,7 @@ class ThemedWindow(tk.Toplevel):
         self.badge.pack(side="left", padx=10)
         close = tk.Label(bar, text="✕", bg=C["panel"], fg=C["muted"], font=self.f.title, padx=12, cursor="hand2")
         close.pack(side="right", fill="y")
-        close.bind("<Enter>", lambda e: close.config(bg=C["accent"], fg="#fff"))
+        close.bind("<Enter>", lambda e: close.config(bg=C["accent"], fg=C["on_accent"]))
         close.bind("<Leave>", lambda e: close.config(bg=C["panel"], fg=C["muted"]))
         close.bind("<Button-1>", lambda e: self.on_close())
         for w in (bar, logo):
@@ -733,7 +728,7 @@ class ExportPopup(ThemedWindow):
         row.grid(row=r, column=1, columnspan=3, sticky="w")
         self.e_key = flat_entry(row, f, 7, self.v_key)
         self.e_key.pack(side="left", ipady=5)
-        drop = tk.Label(row, text="▾", bg=C["field"], fg=C["red_text"], font=f.body, padx=8, pady=4, cursor="hand2")
+        drop = tk.Label(row, text="▾", bg=C["field"], fg=C["btn_text"], font=f.body, padx=8, pady=4, cursor="hand2")
         drop.pack(side="left", padx=(2, 10), fill="y")
         drop.bind("<Button-1>", lambda e: self.key_menu(drop))
         self.chips = tk.Frame(row, bg=C["bg"])
@@ -821,7 +816,7 @@ class ExportPopup(ThemedWindow):
                 self.user_set_bpm = True
             var.set(naming.fmt_bpm(max(v, 1)) if var is self.v_bpm else str(int(max(v, 1))))
         for txt, d in (("−", -step), ("+", step)):
-            lb = tk.Label(row, text=txt, bg=C["field"], fg=C["red_text"], font=self.f.body, padx=9, pady=4,
+            lb = tk.Label(row, text=txt, bg=C["field"], fg=C["btn_text"], font=self.f.body, padx=9, pady=4,
                           cursor="hand2")
             lb.pack(side="left", padx=(2, 0), fill="y")
             lb.bind("<Button-1>", lambda e, d=d: bump(d))
@@ -831,7 +826,7 @@ class ExportPopup(ThemedWindow):
     def key_menu(self, anchor):
         cfg = self.app.cfg
         m = tk.Menu(self, tearoff=0, bg=C["panel"], fg=C["text"], activebackground=C["accent"],
-                    activeforeground="#ffffff", font=self.f.body, bd=0)
+                    activeforeground=C["on_accent"], font=self.f.body, bd=0)
         from key_detect import key_name
         for minor in (True, False):
             for i in range(12):
@@ -896,7 +891,7 @@ class ExportPopup(ThemedWindow):
             on = naming.fmt_bpm(b) == self.v_bpm.get()
             c = tk.Label(self.bpm_chips, text=f"{naming.fmt_bpm(b)}  {int(round(conf * 100))}%", font=self.f.small,
                          padx=8, pady=4, bg=C["accent"] if on else C["field"],
-                         fg="#ffffff" if on else C["red_text"], cursor="hand2")
+                         fg=C["on_accent"] if on else C["btn_text"], cursor="hand2")
             c.pack(side="left", padx=(0, 4))
             c.bind("<Button-1>", lambda e, b=b: self.set_bpm(b))
 
@@ -906,7 +901,7 @@ class ExportPopup(ThemedWindow):
         for k, conf in getattr(self, "detected", [])[:3]:
             on = k == self.v_key.get()
             c = tk.Label(self.chips, text=f"{k}  {int(round(conf * 100))}%", font=self.f.small, padx=8, pady=4,
-                         bg=C["accent"] if on else C["field"], fg="#ffffff" if on else C["red_text"],
+                         bg=C["accent"] if on else C["field"], fg=C["on_accent"] if on else C["btn_text"],
                          cursor="hand2")
             c.pack(side="left", padx=(0, 4))
             c.bind("<Button-1>", lambda e, k=k: self.set_key(k))
@@ -1058,6 +1053,29 @@ class SettingsWindow(ThemedWindow):
             row=r + 1, column=1, columnspan=2, sticky="w")
         r += 2
 
+        # Theme
+        self.v_theme = tk.StringVar(value=cfg.get("theme", "auto"))
+        self.theme_file = cfg.get("theme_file", "")
+        self.theme_colors = dict(cfg.get("theme_colors") or {})
+        label(b, f, "THEME").grid(row=r, column=0, sticky="w", pady=(10, 4))
+        self.theme_seg = Segmented(b, f, [("auto", "Match FL Studio"), ("default", "FL default"),
+                                          ("file", "Theme file"), ("custom", "Custom")], self.v_theme,
+                                   command=self.update_theme)
+        self.theme_seg.grid(row=r, column=1, columnspan=2, sticky="w", pady=(10, 4))
+        r += 1
+        trow = tk.Frame(b, bg=C["bg"])
+        trow.grid(row=r, column=1, columnspan=2, sticky="ew")
+        self.swatch = tk.Canvas(trow, width=5 * 16, height=14, bg=C["bg"], highlightthickness=0)
+        self.swatch.pack(side="left", padx=(0, 8))
+        self.theme_status = label(trow, f, "", fg=C["muted"], font=f.small)
+        self.theme_status.pack(side="left")
+        r += 1
+        tb = tk.Frame(b, bg=C["bg"])
+        tb.grid(row=r, column=1, columnspan=2, sticky="w", pady=(6, 0))
+        FlatButton(tb, "LOAD .FLSTHEME…", self.load_theme_file, f).pack(side="left")
+        FlatButton(tb, "EDIT COLOURS…", self.edit_colours, f).pack(side="left", padx=(6, 0))
+        r += 1
+
         bot = tk.Frame(b, bg=C["bg"])
         bot.grid(row=r, column=0, columnspan=3, sticky="ew", pady=(16, 0))
         tk.Label(bot, text=f"v{__version__}", bg=C["bg"], fg=C["muted"], font=f.small).pack(side="left")
@@ -1066,8 +1084,49 @@ class SettingsWindow(ThemedWindow):
         b.columnconfigure(1, weight=1)
         self.v_tmpl.trace_add("write", lambda *a: self.update_example())
         self.update_example()
+        self.update_theme()
         self.bind("<Escape>", lambda e: self.on_close())
         self.show()
+
+    # -- theme
+    def theme_cfg(self) -> dict:
+        return {"theme": self.v_theme.get(), "theme_file": self.theme_file, "theme_colors": self.theme_colors}
+
+    def update_theme(self):
+        if not hasattr(self, "theme_status"):
+            return
+        pal, status, _ = theme.resolve(self.theme_cfg())
+        self.preview_palette = pal
+        self.theme_status.config(text=status)
+        self.swatch.delete("all")
+        for i, k in enumerate(theme.SEEDS):
+            self.swatch.create_rectangle(i * 16, 0, i * 16 + 13, 13, fill=pal[k], outline=C["border"])
+
+    def load_theme_file(self):
+        start = self.theme_file and str(Path(self.theme_file).parent)
+        dirs = theme.theme_dirs()
+        self.attributes("-topmost", False)
+        p = filedialog.askopenfilename(parent=self, title="Choose an FL Studio theme",
+                                       initialdir=start or (str(dirs[0]) if dirs else str(Path.home())),
+                                       filetypes=[("FL Studio theme", "*.flstheme"), ("All files", "*.*")])
+        self.attributes("-topmost", True)
+        if not p:
+            return
+        try:
+            theme.read_flstheme(p)
+        except Exception as e:
+            self.app.toast(f"Couldn't use that file: {e}")
+            return
+        self.theme_file = str(Path(p))
+        self.theme_seg.set("file")
+
+    def edit_colours(self):
+        start = theme.seeds_of(getattr(self, "preview_palette", None) or C)
+
+        def done(seeds):
+            self.theme_colors = seeds
+            self.theme_seg.set("custom")
+        ThemeEditor(self.app, start, done, parent=self)
 
     def browse(self, var):
         self.attributes("-topmost", False)
@@ -1092,7 +1151,8 @@ class SettingsWindow(ThemedWindow):
                    key_style=self.v_style.get(), accidentals=self.v_acc.get(), action=self.v_action.get(),
                    subfolder_per_beat=self.v_sub.get(), folder_date=self.v_date.get(),
                    detect_key=self.v_detect.get(), check_updates=self.v_updates.get(),
-                   ignore_folders=[x.strip() for x in self.v_ign.get().split(",") if x.strip()])
+                   ignore_folders=[x.strip() for x in self.v_ign.get().split(",") if x.strip()],
+                   **self.theme_cfg())
         save_json(CONFIG_PATH, cfg)
         if sys.platform.startswith("win") and self.v_startup.get() != startup_enabled():
             try:
@@ -1101,6 +1161,7 @@ class SettingsWindow(ThemedWindow):
                 logging.exception("startup toggle failed")
                 self.app.toast(f"Couldn't change startup setting: {e}")
         self.destroy()
+        self.app.apply_theme(announce=False)
         self.app.settings_saved()
         if self.first_run:
             self.app.start_watching()
@@ -1112,6 +1173,214 @@ class SettingsWindow(ThemedWindow):
         self.destroy()
         if self.first_run:
             self.app.quit()
+
+
+# ----------------------------------------------------------- theme editor ----
+class ThemeEditor(ThemedWindow):
+    """Pick the five theme colours by hand, from a colour dialog, or off the screen."""
+
+    def __init__(self, app, seeds: dict, on_done, parent=None):
+        super().__init__(app, "Theme · Colours", 470)
+        self.on_done, self.parent_win = on_done, parent
+        b, f = self.body, self.f
+        label(b, f, "Click a swatch, type a hex code, or hit PICK and click\nthe matching spot in your FL Studio window.",
+              fg=C["text"], font=f.body).grid(row=0, column=0, columnspan=4, sticky="w", pady=(0, 12))
+        self.vars: dict[str, tk.StringVar] = {}
+        self.swatches: dict[str, tk.Label] = {}
+        for i, k in enumerate(theme.SEEDS, start=1):
+            label(b, f, theme.SEED_LABELS[k].upper()).grid(row=i, column=0, sticky="w", padx=(0, 14), pady=3)
+            sw = tk.Label(b, width=4, bg=seeds[k], cursor="hand2", relief="flat",
+                          highlightthickness=1, highlightbackground=C["border"])
+            sw.grid(row=i, column=1, sticky="ns", pady=3)
+            sw.bind("<Button-1>", lambda e, k=k: self.choose(k))
+            v = tk.StringVar(value=seeds[k])
+            v.trace_add("write", lambda *a, k=k: self.changed(k))
+            flat_entry(b, f, 9, v).grid(row=i, column=2, sticky="w", padx=(6, 6), ipady=3, pady=3)
+            FlatButton(b, "PICK", lambda k=k: self.pick(k), f).grid(row=i, column=3, sticky="w", pady=3)
+            self.vars[k], self.swatches[k] = v, sw
+
+        self.preview = tk.Frame(b, highlightthickness=1)
+        self.preview.grid(row=10, column=0, columnspan=4, sticky="ew", pady=(14, 0))
+        self.render_preview()
+
+        bot = tk.Frame(b, bg=C["bg"])
+        bot.grid(row=11, column=0, columnspan=4, sticky="ew", pady=(16, 0))
+        reset = tk.Label(bot, text="reset to FL default", bg=C["bg"], fg=C["muted"], font=f.small, cursor="hand2")
+        reset.pack(side="left")
+        reset.bind("<Button-1>", lambda e: self.set_all(theme.seeds_of(theme.FL_DEFAULT)))
+        FlatButton(bot, "USE THESE", self.done, f, primary=True).pack(side="right")
+        FlatButton(bot, "CANCEL", self.on_close, f).pack(side="right", padx=(0, 8))
+        b.columnconfigure(3, weight=1)
+        self.bind("<Escape>", lambda e: self.on_close())
+        self.show()
+
+    def seeds(self) -> dict:
+        return {k: v.get().strip() for k, v in self.vars.items()}
+
+    def set_all(self, seeds):
+        for k, v in seeds.items():
+            self.vars[k].set(v)
+
+    def changed(self, k):
+        v = self.vars[k].get().strip()
+        if theme.is_hex(v):
+            self.swatches[k].config(bg=theme.to_hex(theme.to_rgb(v)))
+            self.render_preview()
+
+    def render_preview(self):
+        pal = theme.derive(self.seeds())
+        p = self.preview
+        for w in p.winfo_children():
+            w.destroy()
+        p.config(bg=pal["bg"], highlightbackground=pal["accent_dim"])
+        bar = tk.Frame(p, bg=pal["panel"])
+        bar.pack(fill="x")
+        tk.Label(bar, text="PREVIEW", bg=pal["panel"], fg=pal["accent"], font=self.f.title).pack(side="left", padx=8,
+                                                                                                pady=4)
+        body = tk.Frame(p, bg=pal["bg"], padx=10, pady=8)
+        body.pack(fill="x")
+        tk.Label(body, text="NAME", bg=pal["bg"], fg=pal["accent_dim"], font=self.f.label).pack(side="left")
+        tk.Label(body, text="Nightdrive", bg=pal["field"], fg=pal["text"], font=self.f.body, padx=8,
+                 pady=2).pack(side="left", padx=8)
+        tk.Label(body, text="SKIP", bg=pal["field"], fg=pal["btn_text"], font=self.f.button, padx=10,
+                 pady=3).pack(side="right")
+        tk.Label(body, text="SAVE", bg=pal["accent"], fg=pal["on_accent"], font=self.f.button, padx=10,
+                 pady=3).pack(side="right", padx=6)
+        tk.Label(p, text="from project name", bg=pal["bg"], fg=pal["muted"], font=self.f.small,
+                 anchor="w").pack(fill="x", padx=10, pady=(0, 8))
+
+    def choose(self, k):
+        from tkinter import colorchooser
+        self.attributes("-topmost", False)
+        try:
+            res = colorchooser.askcolor(color=self.vars[k].get(), parent=self, title=theme.SEED_LABELS[k])
+        finally:
+            self.attributes("-topmost", True)
+        if res and res[1]:
+            self.vars[k].set(res[1])
+
+    def pick(self, k):
+        hide = [w for w in (self, self.parent_win) if w is not None and w.winfo_exists()]
+        ScreenPicker.start(self.app, lambda hx, k=k: self.vars[k].set(hx), hide)
+
+    def done(self):
+        bad = [theme.SEED_LABELS[k] for k, v in self.seeds().items() if not theme.is_hex(v)]
+        if bad:
+            self.app.toast(f"Not a colour: {', '.join(bad)} (use #rrggbb)")
+            return
+        seeds = {k: theme.to_hex(theme.to_rgb(v)) for k, v in self.seeds().items()}
+        self.destroy()
+        self.on_done(seeds)
+
+
+def virtual_screen(root) -> tuple[int, int, int, int]:
+    """(x, y, w, h) of the whole desktop - every monitor on Windows."""
+    if sys.platform.startswith("win"):
+        try:
+            import ctypes
+            m = ctypes.windll.user32.GetSystemMetrics
+            w, h = m(78), m(79)
+            if w and h:
+                return m(76), m(77), w, h
+        except Exception:
+            pass
+    return 0, 0, root.winfo_screenwidth(), root.winfo_screenheight()
+
+
+class ScreenPicker(tk.Toplevel):
+    """Eyedropper: freezes a snapshot of the screen, click any pixel to take its colour.
+    Esc or right-click cancels. Our own windows are hidden while the snapshot is taken."""
+
+    ZOOM, CELLS = 12, 11
+
+    @classmethod
+    def start(cls, app, callback, hide=()):
+        for w in hide:
+            w.withdraw()
+
+        def restore():
+            for w in hide:
+                if w.winfo_exists():
+                    w.deiconify()
+                    w.lift()
+
+        def grab():
+            try:
+                from PIL import ImageGrab
+                x, y, w, h = virtual_screen(app.root)
+                img = ImageGrab.grab(all_screens=True) if sys.platform.startswith("win") else ImageGrab.grab()
+                cls(app, img.convert("RGB"), (x, y, w, h), callback, restore)
+            except Exception as e:
+                logging.exception("screen picker failed")
+                restore()
+                app.toast(f"Couldn't capture the screen ({type(e).__name__}). Type the colour in instead.")
+        app.root.after(350, grab)
+
+    def __init__(self, app, img, box, callback, restore):
+        from PIL import Image, ImageTk
+        super().__init__(app.root)
+        self.app, self.img, self.callback, self.restore = app, img, callback, restore
+        self._Image, self._ImageTk = Image, ImageTk
+        x, y, w, h = box
+        self.overrideredirect(True)
+        self.attributes("-topmost", True)
+        self.geometry(f"{w}x{h}+{x}+{y}")
+        self.cv = tk.Canvas(self, width=w, height=h, highlightthickness=0, cursor="crosshair", bd=0)
+        self.cv.pack()
+        self.shot = ImageTk.PhotoImage(img)
+        self.cv.create_image(0, 0, image=self.shot, anchor="nw")
+        side = self.ZOOM * self.CELLS
+        self.loupe_img = None
+        self.loupe = self.cv.create_image(0, 0, anchor="nw")
+        self.frame = self.cv.create_rectangle(0, 0, side, side, outline=C["accent"], width=2)
+        self.centre = self.cv.create_rectangle(0, 0, 0, 0, outline="#ffffff", width=1)
+        self.tag_bg = self.cv.create_rectangle(0, 0, 0, 0, fill=C["panel"], outline=C["accent"])
+        self.tag = self.cv.create_text(0, 0, anchor="nw", fill=C["text"], font=app.fonts.small)
+        self.hint = self.cv.create_text(w // 2, 24, text="click a colour  ·  Esc to cancel", fill=C["text"],
+                                        font=app.fonts.title)
+        x1, y1, x2, y2 = self.cv.bbox(self.hint)
+        self.cv.tag_lower(self.cv.create_rectangle(x1 - 12, y1 - 6, x2 + 12, y2 + 6, fill=C["panel"],
+                                                   outline=C["accent"]), self.hint)
+        self.cv.bind("<Motion>", self.move)
+        self.cv.bind("<Button-1>", self.take)
+        for seq in ("<Escape>", "<Button-3>"):
+            self.bind(seq, lambda e: self.finish(None))
+        self.after(30, self.focus_force)
+
+    def colour_at(self, x, y) -> str:
+        x = max(0, min(self.img.width - 1, x))
+        y = max(0, min(self.img.height - 1, y))
+        return theme.to_hex(self.img.getpixel((x, y)))
+
+    def move(self, e):
+        n, z = self.CELLS, self.ZOOM
+        half = n // 2
+        crop = self.img.crop((e.x - half, e.y - half, e.x + half + 1, e.y + half + 1))
+        self.loupe_img = self._ImageTk.PhotoImage(crop.resize((n * z, n * z), self._Image.NEAREST))
+        side = n * z
+        lx = e.x + 24 if e.x + 24 + side < self.img.width else e.x - 24 - side
+        ly = e.y + 24 if e.y + 24 + side + 26 < self.img.height else e.y - 24 - side - 26
+        self.cv.itemconfig(self.loupe, image=self.loupe_img)
+        self.cv.coords(self.loupe, lx, ly)
+        self.cv.coords(self.frame, lx, ly, lx + side, ly + side)
+        self.cv.coords(self.centre, lx + half * z, ly + half * z, lx + (half + 1) * z, ly + (half + 1) * z)
+        hx = self.colour_at(e.x, e.y)
+        self.cv.itemconfig(self.tag, text=f"  {hx}")
+        self.cv.coords(self.tag, lx, ly + side + 4)
+        self.cv.coords(self.tag_bg, lx, ly + side + 2, lx + side, ly + side + 24)
+        self.cv.itemconfig(self.tag_bg, fill=hx)
+        self.cv.itemconfig(self.tag, fill="#000000" if theme.luminance(hx) > 0.35 else "#ffffff")
+        for item in (self.frame, self.centre, self.tag_bg, self.tag):
+            self.cv.tag_raise(item)
+
+    def take(self, e):
+        self.finish(self.colour_at(e.x, e.y))
+
+    def finish(self, hx):
+        self.destroy()
+        self.restore()
+        if hx:
+            self.callback(hx)
 
 
 # ------------------------------------------------------------------ toast ----
@@ -1142,6 +1411,26 @@ class Toast(tk.Toplevel):
         self.after(int(seconds * 1000), self.destroy)
 
 
+def logo_image(size: int = 64):
+    """The bars logo in the current theme colours (tray + window icon)."""
+    from PIL import Image, ImageDraw
+    img = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    bg, acc = theme.to_rgb(theme.mix(C["field"], "#000000", 0.35)), theme.to_rgb(C["accent"])
+    d.rounded_rectangle((2, 2, 62, 62), 12, fill=bg + (255,), outline=acc + (255,), width=3)
+    for i, h in enumerate((16, 32, 42, 24, 34)):
+        x = 12 + i * 9
+        d.rectangle((x, 52 - h, x + 5, 52), fill=acc + (255,))
+    return img if size == 64 else img.resize((size, size), Image.LANCZOS)
+
+
+def _mtime(p) -> float | None:
+    try:
+        return os.stat(p).st_mtime if p else None
+    except OSError:
+        return None
+
+
 # -------------------------------------------------------------------- app ----
 class App:
     def __init__(self, root=None):
@@ -1150,6 +1439,8 @@ class App:
         self.root.title(APP)
         self.fonts = Fonts(self.root)
         self.cfg = load_config()
+        self.theme_src, self.theme_mtime, self._theme_seen = None, None, None
+        self.apply_theme()
         self.state = load_json(STATE_PATH, {"projects": {}, "ignored_paths": []})
         self.ui_q: queue.Queue = queue.Queue()
         self.jobs: list[Job] = []
@@ -1159,6 +1450,51 @@ class App:
         self.watcher = ExportWatcher(self)
         self.tray = None
         self.root.after(100, self.pump)
+        self.root.after(THEME_POLL_MS, self.watch_theme)
+
+    # -- theme
+    def apply_theme(self, announce=False) -> bool:
+        """Load the palette the config asks for into C. True if the colours changed."""
+        try:
+            pal, status, src = theme.resolve(self.cfg)
+        except Exception:
+            logging.exception("theme failed - using FL default")
+            pal, status, src = dict(theme.FL_DEFAULT), "FL default", None
+        changed = pal != C
+        C.clear()
+        C.update(pal)
+        self.theme_status, self.theme_src = status, src
+        self.theme_mtime = self._theme_seen = _mtime(src)
+        if changed:
+            logging.info("theme: %s", status)
+            self.retheme()
+            if announce:
+                self.toast("Colours updated to match FL Studio.")
+        return changed
+
+    def watch_theme(self):
+        """Every few seconds: has FL (or the chosen file) written a new theme?"""
+        try:
+            mode = self.cfg.get("theme", "auto")
+            src = self.theme_src
+            if mode == "auto":
+                src = theme.find_current_theme()
+            m = _mtime(src)
+            if src != self.theme_src or m != self.theme_mtime:
+                if m == self._theme_seen:       # unchanged for one tick = FL has finished writing it
+                    self.apply_theme(announce=False)
+                self._theme_seen = m
+        except Exception:
+            logging.exception("theme watch failed")
+        self.root.after(THEME_POLL_MS, self.watch_theme)
+
+    def retheme(self):
+        """Colours changed: refresh what stays on screen. Popups pick it up next time."""
+        if self.tray is not None:
+            try:
+                self.tray.icon = logo_image()
+            except Exception:
+                logging.exception("tray icon refresh failed")
 
     # thread-safe hand-off into the Tk thread
     def call(self, fn):
@@ -1358,16 +1694,10 @@ class App:
     def start_tray(self):
         try:
             import pystray
-            from PIL import Image, ImageDraw
         except Exception as e:  # missing package, or no tray backend on this OS
             logging.warning("no tray icon (%s) - running without one", e)
             return
-        img = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
-        d = ImageDraw.Draw(img)
-        d.rounded_rectangle((2, 2, 62, 62), 12, fill=(29, 29, 29, 255), outline=(255, 78, 100, 255), width=3)
-        for i, h in enumerate((16, 32, 42, 24, 34)):
-            x = 12 + i * 9
-            d.rectangle((x, 52 - h, x + 5, 52), fill=(255, 78, 100, 255))
+        img = logo_image()
         M = pystray.MenuItem
         menu = pystray.Menu(
             M("Open Beats folder", lambda: self.call(lambda: self.safe_open(self.cfg["beats_folder"], make=True)), default=True),

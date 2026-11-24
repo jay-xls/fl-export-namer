@@ -20,8 +20,9 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
 import naming  # noqa: E402
+import theme  # noqa: E402
 from namer_core import (APPDIR, AUDIO_EXTS, DETECTABLE, FROZEN, LOG_PATH, App, C, Job,  # noqa: E402
-                        SettingsWindow, Toggle, __version__, label, short)
+                        SettingsWindow, Toggle, __version__, label, logo_image, short)
 
 PORT = 47614
 MAX_RECENT = 7
@@ -37,7 +38,7 @@ def make_root():
 
 
 def dark_titlebar(win):
-    """Windows 10/11: dark caption in FL colours. Silently skipped elsewhere."""
+    """Windows 10/11: caption in the theme colours. Silently skipped elsewhere."""
     if not sys.platform.startswith("win"):
         return
     try:
@@ -45,7 +46,9 @@ def dark_titlebar(win):
         win.update_idletasks()
         hwnd = ctypes.windll.user32.GetParent(win.winfo_id())
         dwm = ctypes.windll.dwmapi.DwmSetWindowAttribute
-        for attr, val in ((20, 1), (35, 0x001D1D1D), (36, 0x00644EFF), (34, 0x00555AA0)):
+        dark = int(theme.luminance(C["panel"]) < 0.35)
+        for attr, val in ((20, dark), (35, theme.colorref(C["panel"])), (36, theme.colorref(C["accent"])),
+                          (34, theme.colorref(C["accent_dim"]))):
             v = ctypes.c_int(val)
             dwm(hwnd, attr, ctypes.byref(v), ctypes.sizeof(v))
     except Exception:
@@ -120,8 +123,10 @@ class SorterApp(App):
         r, f = self.root, self.fonts
         r.title("Beat Sorter")
         r.configure(bg=C["bg"])
-        r.geometry("600x560")
-        r.minsize(520, 480)
+        if not getattr(self, "_built", False):  # a re-theme rebuild keeps the user's window size
+            r.geometry("600x560")
+            r.minsize(520, 480)
+            self._built = True
         self.set_icon()
 
         head = tk.Frame(r, bg=C["panel"], height=44)
@@ -147,7 +152,9 @@ class SorterApp(App):
         self.zone_hot = False
         if self.dnd:
             from tkinterdnd2 import DND_FILES
-            for w in (self.zone, r):
+            first = not getattr(self, "_root_dnd", False)
+            self._root_dnd = True
+            for w in (self.zone, r) if first else (self.zone,):
                 w.drop_target_register(DND_FILES)
                 w.dnd_bind("<<Drop>>", self.on_drop)
                 w.dnd_bind("<<DropEnter>>", lambda e: self.hot(True))
@@ -189,16 +196,20 @@ class SorterApp(App):
 
     def set_icon(self):
         try:
-            from PIL import Image, ImageDraw, ImageTk
-            img = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
-            d = ImageDraw.Draw(img)
-            d.rounded_rectangle((2, 2, 62, 62), 12, fill=(29, 29, 29, 255), outline=(255, 78, 100, 255), width=3)
-            for i, h in enumerate((16, 32, 42, 24, 34)):
-                d.rectangle((12 + i * 9, 52 - h, 17 + i * 9, 52), fill=(255, 78, 100, 255))
-            self._icon = ImageTk.PhotoImage(img)
+            from PIL import ImageTk
+            self._icon = ImageTk.PhotoImage(logo_image())
             self.root.iconphoto(True, self._icon)
         except Exception:
             pass
+
+    def retheme(self):
+        super().retheme()
+        if getattr(self, "zone", None) is None:
+            return  # window not built yet
+        for w in self.root.winfo_children():
+            if not isinstance(w, tk.Toplevel):
+                w.destroy()
+        self.build_window()
 
     def draw_zone(self):
         z, f = self.zone, self.fonts
