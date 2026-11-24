@@ -4,6 +4,14 @@ Every release gets a section here **before** it's built - the release workflow
 uses it as the release notes and refuses to run without one.
 Versions: `MAJOR.MINOR.PATCH` - bug fix = patch, new feature = minor.
 
+## [1.3.0] - 2026-11-24
+### Added
+- Theme setting: **Match FL Studio** (default) follows FL's current theme automatically, updating when FL closes. Also: FL default, any `.flstheme` file, or Custom.
+- Colour editor with a screen eyedropper, so you can pick colours straight off your FL Studio window.
+### Changed
+- New default look: FL Studio's stock blue-grey and orange, in the app and on the guide. Tray and window icons follow the theme.
+- Warnings are shown in red instead of amber, so they stand out from the orange accent.
+
 ## [1.2.0] - 2026-11-24
 ### Added
 - Update check: once a day the app looks for a newer release and shows a "download the update" toast. Can be turned off in Settings.

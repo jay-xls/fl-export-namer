@@ -19,7 +19,8 @@ hidden += [
     "pystray._win32",                          # tray icon backend
     "watchdog.observers.read_directory_changes",  # Windows folder watching
     "PIL._tkinter_finder",
-    "sorter_app", "namer_core", "naming", "flp_reader", "key_detect", "bpm_detect",
+    "PIL.ImageGrab", "PIL.ImageTk",            # theme eyedropper (screen colour picker)
+    "sorter_app", "namer_core", "naming", "theme", "flp_reader", "key_detect", "bpm_detect",
 ]
 
 a = Analysis(

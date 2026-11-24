@@ -11,14 +11,13 @@
 /* VOICE: community-doc "bible" - practical, lowercase labels, dense but readable, honest about limits.
    IDEA: a mirrored community guide doc - nested index on the left, dated edit heading, jump bar, "in this section".
    PICTURE: the real export popup, large, with what each part means set beside it.
-   COLOUR and TYPE: FL Studio's own skin - charcoal #262626, playlist brown #342b2b, selection red #ff4e64; Barlow Semi Condensed like FL's UI, Barlow body.
+   COLOUR and TYPE: FL Studio's stock theme, and only that - blue-grey panels #3f484d / #535c61, dark display boxes #2f383d, signature orange #f7a13d (same values as theme.FL_DEFAULT in the app); Barlow Semi Condensed like FL's UI, Barlow body.
    LAYOUT: sticky header, sticky nested index (drawer on phones), one reading column with screenshots and tables. */
-:root{color-scheme:light dark;
---bg:light-dark(#fbf9f9,#1f1d1d);--panel:light-dark(#f2eded,#262626);--side:light-dark(#f5f1f1,#1b1a1a);
---ink:light-dark(#1d1718,#efe6e7);--muted:light-dark(#6d5f61,#a09091);--line:light-dark(#e3d9da,#3a3232);
---accent:light-dark(#c81f3a,#ff4e64);--accent-ink:#fff;--soft:light-dark(#fbe7ea,#342b2b);--code:light-dark(#f1e9ea,#2e2525);
---warn:light-dark(#9a5a00,#f3a35b)}
-:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+:root{color-scheme:dark;
+--bg:#353d42;--panel:#41494e;--side:#2f383d;
+--ink:#e8eef1;--muted:#a6b3ba;--line:#4b555b;
+--accent:#f7a13d;--accent-ink:#22292d;--soft:#3e474c;--code:#2a3237;
+--warn:#ff7a66}
 *{box-sizing:border-box;min-width:0}
 html{scroll-padding-top:72px;scroll-behavior:smooth}
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
@@ -110,10 +109,10 @@ footer{border-top:1px solid var(--line);margin-top:56px;padding-top:16px;color:v
 <header>
   <button class="burger" id="burger" aria-label="Show index" aria-expanded="false">☰</button>
   <a class="brand" href="#top">
-    <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="1" y="1" width="20" height="20" rx="4" fill="#1d1d1d" stroke="#ff4e64" stroke-width="1.5"/><g fill="#ff4e64"><rect x="4.5" y="11" width="2" height="6"/><rect x="7.6" y="7" width="2" height="10"/><rect x="10.7" y="5" width="2" height="12"/><rect x="13.8" y="9" width="2" height="8"/><rect x="16.9" y="7.5" width="1.6" height="9.5"/></g></svg>
+    <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="1" y="1" width="20" height="20" rx="4" fill="#1f2528" stroke="#f7a13d" stroke-width="1.5"/><g fill="#f7a13d"><rect x="4.5" y="11" width="2" height="6"/><rect x="7.6" y="7" width="2" height="10"/><rect x="10.7" y="5" width="2" height="12"/><rect x="13.8" y="9" width="2" height="8"/><rect x="16.9" y="7.5" width="1.6" height="9.5"/></g></svg>
     <span>FL Export Namer<span class="g"> guide</span></span>
   </a>
-  <a class="dl" href="https://github.com/jay-xls/fl-export-namer/releases/latest">download</a><span class="ver">v1.2.0 · windows</span>
+  <a class="dl" href="https://github.com/jay-xls/fl-export-namer/releases/latest">download</a><span class="ver">v1.3.0 · windows</span>
 </header>
 
 <div class="wrap">
@@ -132,7 +131,8 @@ footer{border-top:1px solid var(--line);margin-top:56px;padding-top:16px;color:v
     <li><a href="#sorter">beat sorter (old exports)</a>
       <ul><li><a href="#sorter-use">using it</a></li><li><a href="#sorter-hints">what it reads from file names</a></li></ul></li>
     <li><a href="#tray">tray menu</a></li>
-    <li><a href="#settings">settings</a></li>
+    <li><a href="#settings">settings</a>
+      <ul><li><a href="#theme">colours + FL theme</a></li></ul></li>
     <li><a href="#format">name format</a></li>
     <li><a href="#accuracy">how accurate is it</a></li>
     <li><a href="#trouble">troubleshooting</a></li>
@@ -143,7 +143,7 @@ footer{border-top:1px solid var(--line);margin-top:56px;padding-top:16px;color:v
 
 <main id="top">
   <h1>edit. 24.11.26</h1>
-  <p class="credits"><b>FL Export Namer v1.2.0</b>, made by <b>Jay</b>. Windows 10/11 · no Python needed · works with FL Studio project folders · free, share it with whoever.<br>
+  <p class="credits"><b>FL Export Namer v1.3.0</b>, made by <b>Jay</b>. Windows 10/11 · no Python needed · works with FL Studio project folders · free, share it with whoever.<br>
   <a href="https://github.com/jay-xls/fl-export-namer/releases/latest">download</a> · <a href="https://github.com/jay-xls/fl-export-namer/issues/new/choose">report a bug / suggest a feature</a> · <a href="https://github.com/jay-xls/fl-export-namer">source on GitHub</a></p>
   <p class="syn">A small Windows app that watches your FL Studio projects folder. When you export a beat, it pops up with the name, BPM, key and next version number already filled in. Hit Enter and the file is renamed and filed into one tidy beats folder. It comes with <b>Beat Sorter</b> for the pile of old, randomly named exports: drop them in, and it works out the BPM and key from the audio.</p>
 
@@ -160,7 +160,7 @@ footer{border-top:1px solid var(--line);margin-top:56px;padding-top:16px;color:v
       <li><b>EXPORT</b><span>the file(s) FL just rendered. WAV and MP3 rendered together count as one.</span></li>
       <li><b>NAME</b><span>from your project (or what you called it last time).</span></li>
       <li><b>BPM</b><span>read straight out of the saved .flp, not guessed.</span></li>
-      <li><b>KEY</b><span>detected from the audio. The red chips are the top 3 guesses; click one to swap.</span></li>
+      <li><b>KEY</b><span>detected from the audio. The orange chips are the top 3 guesses; click one to swap.</span></li>
       <li><b>VERSION</b><span>the next free number for that beat.</span></li>
       <li><b>SAVES AS</b><span>the exact file name and folder it'll go to. Updates as you type.</span></li>
     </ul>
@@ -193,7 +193,7 @@ footer{border-top:1px solid var(--line);margin-top:56px;padding-top:16px;color:v
     <tr><td>watch folder</td><td>where FL saves your projects. Every subfolder is watched.</td><td><code>Documents\Image-Line\FL Studio\Projects</code></td></tr>
     <tr><td>beats folder</td><td>where finished, named exports should end up. Created on first save.</td><td><code>Music\FL Export</code></td></tr>
   </tbody></table>
-  <p>Hit <b>START WATCHING</b>. From then on it lives in the system tray: the red bars icon, bottom right. Check the <kbd>^</kbd> overflow arrow if you can't see it. Drag it onto the taskbar to keep it visible.</p>
+  <p>Hit <b>START WATCHING</b>. From then on it lives in the system tray: the orange bars icon, bottom right. Check the <kbd>^</kbd> overflow arrow if you can't see it. Drag it onto the taskbar to keep it visible.</p>
 
   <h2 id="exporting">exporting from FL</h2>
   <ol class="steps">
@@ -201,12 +201,12 @@ footer{border-top:1px solid var(--line);margin-top:56px;padding-top:16px;color:v
     <li>Wait for the render to finish. The popup appears about 5 seconds later. It waits until the file has stopped growing, then a moment longer to catch an MP3 rendered alongside.</li>
     <li>Check it, press <kbd>Enter</kbd>. A toast in the corner confirms where it went, with an "open folder" link.</li>
   </ol>
-  <div class="note"><p><b>save the project before exporting</b> if you changed the tempo. BPM comes from the saved .flp, so an unsaved tempo change gives you the old number. The popup warns you in amber if the project was last saved more than 2 minutes before the export.</p></div>
+  <div class="note"><p><b>save the project before exporting</b> if you changed the tempo. BPM comes from the saved .flp, so an unsaved tempo change gives you the old number. The popup warns you in red if the project was last saved more than 2 minutes before the export.</p></div>
   <p>Ignored on purpose: anything rendered <i>outside</i> the watch folder, anything already inside the beats folder, and subfolders named <code>Backup</code>, <code>Recorded</code>, <code>Audio</code>, <code>Sliced</code>, <code>Audio Logger</code>, <code>Autosave</code> or <code>Samples</code>. That stops recordings and backups from triggering popups.</p>
 
   <h2 id="popup">the popup</h2>
   <h3 id="fields">where each field comes from</h3>
-  <table class="stack"><thead><tr><th>field</th><th>filled from (first match wins)</th><th>amber hint means</th></tr></thead><tbody>
+  <table class="stack"><thead><tr><th>field</th><th>filled from (first match wins)</th><th>red hint means</th></tr></thead><tbody>
     <tr><td>name</td><td>what you saved this project as last time → project name if it's already in your format → Project Info title → .flp file name with junk removed (<code>_2</code>, <code>140bpm</code>, <code>(autosave)</code>)</td><td>FL's auto-name like <code>Project_23</code>. It's pre-selected, so just type over it.</td></tr>
     <tr><td>bpm</td><td>the saved project's tempo</td><td>no tempo saved (FL default 140), couldn't read it, or the project's older than the export</td></tr>
     <tr><td>key</td><td>what you used last time for this project → detected from the audio. Top 3 as chips, <b>▾</b> lists all 24 keys.</td><td>the detector's unsure. Check it.</td></tr>
@@ -265,7 +265,7 @@ footer{border-top:1px solid var(--line);margin-top:56px;padding-top:16px;color:v
   <p><code>dark trap 140 bpm Am final (1).wav</code> → name <b>dark trap</b>, 140 BPM, Am.</p>
 
   <h2 id="tray">tray menu</h2>
-  <p>Right-click the red bars icon:</p>
+  <p>Right-click the orange bars icon:</p>
   <table><thead><tr><th>item</th><th>does</th></tr></thead><tbody>
     <tr><td>open beats folder</td><td>opens your beats folder (also what a left-click does)</td></tr>
     <tr><td>open beat sorter</td><td>opens the drop window</td></tr>
@@ -277,7 +277,7 @@ footer{border-top:1px solid var(--line);margin-top:56px;padding-top:16px;color:v
   </tbody></table>
 
   <h2 id="settings">settings</h2>
-  <figure style="margin:12px 0"><img class="shot" src="img/settings.png" width="702" height="556" alt="Settings window: watch and beats folders, name format with example, key style, accidentals, default move or copy, toggles for subfolder per beat, date on beat folders, detect key, start with Windows, and the ignore list"></figure>
+  <figure style="margin:12px 0"><img class="shot" src="img/settings.png" width="702" height="660" alt="Settings window: watch and beats folders, name format with example, key style, accidentals, default move or copy, toggles for subfolder per beat, date on beat folders, key detection and update checks, ignored subfolders, and the theme row set to Match FL Studio"></figure>
   <table class="stack"><thead><tr><th>setting</th><th>what it does</th></tr></thead><tbody>
     <tr><td>watch folder</td><td>FL projects root. Changing it restarts watching straight away.</td></tr>
     <tr><td>beats folder</td><td>where named exports go</td></tr>
@@ -291,8 +291,30 @@ footer{border-top:1px solid var(--line);margin-top:56px;padding-top:16px;color:v
     <tr><td>check for updates</td><td>once a day, asks GitHub if there's a newer version and shows a toast if so. Nothing else is sent.</td></tr>
     <tr><td>start with windows</td><td>launches the watcher at login</td></tr>
     <tr><td>ignore</td><td>subfolder names that never trigger a popup, comma-separated</td></tr>
+    <tr><td>theme</td><td>the app's colours. See <a href="#theme">colours + FL theme</a>.</td></tr>
   </tbody></table>
   <p>Your version number is shown bottom-left of the settings window.</p>
+  <h3 id="theme">colours + FL theme</h3>
+  <p>Out of the box the app wears FL Studio's stock look: blue-grey panels and the orange highlight. If you've re-skinned FL, the app can follow your theme instead. Pick one under <b>theme</b> in settings:</p>
+  <table class="stack"><thead><tr><th>option</th><th>what it does</th></tr></thead><tbody>
+    <tr><td>match FL studio</td><td>the default. Follows the theme FL is using, automatically. FL saves its current theme when it closes, so after you change themes the app catches up within a few seconds of you closing FL.</td></tr>
+    <tr><td>FL default</td><td>always the stock FL look, whatever FL is set to.</td></tr>
+    <tr><td>theme file</td><td><b>LOAD .FLSTHEME…</b> and pick any FL theme file, e.g. one you downloaded. Your own saved themes are in <code>Documents\Image-Line\FL Studio\Settings\Themes</code>.</td></tr>
+    <tr><td>custom</td><td><b>EDIT COLOURS…</b> and set the five colours yourself (below).</td></tr>
+  </tbody></table>
+  <p>The little swatches under the buttons preview the result. The line beside them says where the colours came from, or why it fell back to FL default (no FL theme found, unreadable file). Hit <b>SAVE</b> to apply. Beat Sorter's window recolours straight away. Popups use the new colours from the next one.</p>
+  <div class="pair">
+    <figure><img class="shot" src="img/theme-colours.png" width="470" height="485" alt="Theme colours window: background, title bars, boxes and buttons, accent and text, each with a swatch, a hex code box and a PICK button, above a live preview of a name box with save and skip buttons"><figcaption>edit colours</figcaption></figure>
+    <div>
+      <p><b>edit colours</b> starts from whatever's active, so you can load your FL theme and then just touch up one colour.</p>
+      <ul>
+        <li>click a swatch for a colour picker, or type a hex code like <code>#f7a13d</code></li>
+        <li><b>PICK</b> is an eyedropper. Have FL Studio open behind, click PICK, then click the matching spot in FL, e.g. the playlist background or a lit button. A magnifier shows the exact pixel. <kbd>Esc</kbd> cancels.</li>
+        <li><b>reset to FL default</b> puts the stock colours back</li>
+      </ul>
+    </div>
+  </div>
+  <div class="note"><p><b>close, not exact.</b> FL's theme files don't spell out every panel colour. Most are FL's own grey shifted by the theme's hue / saturation / lightness sliders, so the app works them out. It gets close. If something's a shade off, switch to <b>custom</b> and fix it with the eyedropper.</p></div>
 
   <h2 id="format">name format</h2>
   <p>Default: <code>{name}_{bpm}bpm_{key}_v{version}</code>. Must contain <code>{name}</code> and <code>{version}</code>.</p>
@@ -320,7 +342,7 @@ footer{border-top:1px solid var(--line);margin-top:56px;padding-top:16px;color:v
     <dt>popups for recordings or bounced samples</dt>
     <dd>Click <b>ignore this folder</b> in the popup, or add the subfolder's name to <b>ignore</b> in settings.</dd>
     <dt>BPM is wrong</dt>
-    <dd>Save the project, then export again. If the box is amber and empty, the project file couldn't be read, possibly after an FL update changed the file format. Type it in and send the log.</dd>
+    <dd>Save the project, then export again. If the hint is red and the box empty, the project file couldn't be read, possibly after an FL update changed the file format. Type it in and send the log.</dd>
     <dt>key is wrong</dt>
     <dd>Click the right chip or pick from <b>▾</b>. It's remembered for that project from then on.</dd>
     <dt>drag and drop doesn't work in beat sorter</dt>
@@ -345,6 +367,11 @@ footer{border-top:1px solid var(--line);margin-top:56px;padding-top:16px;color:v
 
   <h2 id="changelog">changelog</h2>
   <p>Every version's notes are on the <a href="https://github.com/jay-xls/fl-export-namer/releases">releases page</a> (full history in <a href="https://github.com/jay-xls/fl-export-namer/blob/main/CHANGELOG.md">CHANGELOG.md</a>). Latest:</p>
+  <h3>1.3.0 · 24.11.26</h3>
+  <ul>
+    <li>New look: FL Studio's stock grey and orange by default.</li>
+    <li>The app can match your own FL theme: automatically, from a <code>.flstheme</code> file, or set by hand with an eyedropper. See <a href="#theme">colours + FL theme</a>.</li>
+  </ul>
   <h3>1.2.0 · 24.11.26</h3>
   <ul>
     <li>Update check: a toast tells you when a new version is out. Turn it off in settings.</li>
@@ -353,13 +380,18 @@ footer{border-top:1px solid var(--line);margin-top:56px;padding-top:16px;color:v
 
   <footer>
     <a href="#top">Full table of contents ↑</a>
-    <span>last edit 24.11.26 · 13 sections · v1.2.0</span>
+    <span>last edit 24.11.26 · 13 sections · v1.3.0</span>
   </footer>
 </main>
 </div>
 
 <script>
 {
+  // phone layout: each stacked table cell is labelled with its column heading
+  document.querySelectorAll('table.stack').forEach(t => {
+    const heads = [...t.querySelectorAll('thead th')].map(th => th.textContent);
+    t.querySelectorAll('tbody tr').forEach(tr => [...tr.children].forEach((td, i) => td.dataset.l = heads[i] || ''));
+  });
   const body = document.body, burger = document.getElementById('burger'), side = document.getElementById('side');
   const setOpen = on => { body.classList.toggle('open', on); burger.setAttribute('aria-expanded', on); };
   burger.addEventListener('click', () => setOpen(!body.classList.contains('open')));

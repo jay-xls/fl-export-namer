@@ -8,7 +8,8 @@ old exports by estimating BPM + key from the audio. Shared with friends as a PyI
 ## Files
 | file | what |
 |---|---|
-| `namer_core.py` | everything shared: config/state, theme (`C`), `Job`, `build_job`, `dest_dir`, `ExportWatcher`, `ExportPopup`, `SettingsWindow`, `Toast`, `App` (tray, apply/undo), startup toggle, `__version__`, watcher `main()` |
+| `namer_core.py` | everything shared: config/state, live palette (`C`), `Job`, `build_job`, `dest_dir`, `ExportWatcher`, `ExportPopup`, `SettingsWindow`, `ThemeEditor` + `ScreenPicker` (eyedropper), `Toast`, `App` (tray, apply/undo, theme sync), startup toggle, `__version__`, watcher `main()` |
+| `theme.py` | `FL_DEFAULT` palette (FL stock grey + orange), `.flstheme` parsing, `derive()` from 5 seed colours, finding FL's `__current.flstheme`, `resolve(cfg)` |
 | `sorter_app.py` | Beat Sorter window (`SorterApp(App)`), drag-and-drop, file-name hints, single-instance forwarding (port 47614) |
 | `naming.py` | templates, version numbering, name cleanup, `parse_hints`, `is_generic` (Project_23) |
 | `flp_reader.py` | minimal .flp parser: tempo (event 156, BPM x1000), title. FL 2026 quirk: event 172 is 1 byte - parse both ways |
@@ -41,7 +42,9 @@ old exports by estimating BPM + key from the audio. Shared with friends as a PyI
 - `UPDATE_REPO` in `namer_core.py` must stay the real `owner/repo`.
 
 ## Rules for changes
-- Keep the FL look: colours in `C`, widgets `FlatButton` / `flat_entry` / `Toggle` / `Segmented` / `ThemedWindow`.
+- Keep the FL look: colours only from `C` (never hard-coded hex - users can re-theme, light themes included;
+  text on an accent background is `C["on_accent"]`), widgets `FlatButton` / `flat_entry` / `Toggle` / `Segmented` / `ThemedWindow`.
+  New palette keys go in `theme.FL_DEFAULT` and `theme.derive()`. The guide (`docs/`) uses the FL default palette only.
 - Never block the Tk thread: detection runs in threads and hands results back with `app.call(...)`.
   Bind values into those lambdas (`lambda r=res: ...`) - a late-binding bug once put the key in the BPM box.
 - New config keys go in `DEFAULT_CONFIG` (old configs get the default automatically).
