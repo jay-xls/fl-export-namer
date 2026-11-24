@@ -36,10 +36,10 @@ Windows 10/11 · free · no Python needed. Windows will say the app is from an u
 
 | | |
 |---|---|
-| Run from source | `py -m pip install -r requirements.txt` then `py daw_export_fixer.pyw` (watcher) / `py beat_sorter.pyw` / `py daw_export_fixer.pyw --demo` |
+| Run from source | `py -m pip install -r requirements.txt` then `py src\daw_export_fixer.pyw` (watcher) / `py src\beat_sorter.pyw` / `py src\daw_export_fixer.pyw --demo` |
 | Tests | `py -m pip install -r requirements-dev.txt` then `py -m pytest tests` |
 | Local build | double-click `build_kit\build.bat` → `dist\` |
-| Release | add a `CHANGELOG.md` section, bump `__version__` in `namer_core.py`, merge to `main`, then **Actions → release → Run workflow** |
+| Release | add a `CHANGELOG.md` section, bump `__version__` in `src/namer_core.py`, merge to `main`, then **Actions → release → Run workflow** |
 | Guide | edit `docs/index.html` - it republishes automatically when merged to `main` |
 
-How the code is laid out, and the rules for changing it: [`CLAUDE.md`](CLAUDE.md).
+All the app code is in `src/` (`launcher.py` is the entry point of the built app). Tests are in `tests/`, build files in `build_kit/`, the guide in `docs/`.

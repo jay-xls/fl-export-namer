@@ -24,8 +24,8 @@ hidden += [
 ]
 
 a = Analysis(
-    [str(ROOT / "launcher.py")],
-    pathex=[str(ROOT)],
+    [str(ROOT / "src" / "launcher.py")],
+    pathex=[str(ROOT / "src")],
     binaries=binaries,
     datas=datas,
     hiddenimports=hidden,

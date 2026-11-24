@@ -16,7 +16,7 @@ if errorlevel 1 (
 )
 
 echo  Installing the few libraries it needs...
-py -3 -m pip install --user --quiet -r "%~dp0requirements.txt"
+py -3 -m pip install --user --quiet -r "%~dp0..\requirements.txt"
 if errorlevel 1 (
   echo  pip install failed - see the message above.
   pause

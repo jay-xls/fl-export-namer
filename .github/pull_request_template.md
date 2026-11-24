@@ -2,8 +2,8 @@
 <!-- One or two lines. Link the issue: "Closes #12" -->
 
 ## Checklist
-- [ ] Tested from source (`py daw_export_fixer.pyw` / `py beat_sorter.pyw` / `--demo`)
+- [ ] Tested from source (`py src\daw_export_fixer.pyw` / `py src\beat_sorter.pyw` / `--demo`)
 - [ ] `CHANGELOG.md` has a line for this under the next version
-- [ ] `__version__` in `namer_core.py` bumped (if this PR is a release)
+- [ ] `__version__` in `src/namer_core.py` bumped (if this PR is a release)
 - [ ] `docs/index.html` updated if anything users see changed
-- [ ] New library? Added to `requirements.txt` and to `selftest()` in `launcher.py`
+- [ ] New library? Added to `requirements.txt` and to `selftest()` in `src/launcher.py`

@@ -13,7 +13,7 @@ where py >nul 2>nul
 if errorlevel 1 (echo Python launcher "py" not found - install Python 3.11+ from python.org first. & pause & exit /b 1)
 
 set "VER="
-for /f "tokens=2 delims==" %%v in ('findstr /b "__version__" "namer_core.py"') do set "VER=%%~v"
+for /f "tokens=2 delims==" %%v in ('findstr /b "__version__" "src\namer_core.py"') do set "VER=%%~v"
 if defined VER set "VER=%VER: =%"
 if defined VER set "VER=%VER:"=%"
 if not defined VER set "VER=dev"
