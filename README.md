@@ -8,7 +8,7 @@ BPM and key from the audio.
 
 <img src="docs/img/popup.png" width="520" alt="The popup that appears after exporting: name, BPM read from the project, detected key with alternatives, version, and the final file name">
 
-### [⬇ Download the latest version](https://github.com/jay-xls/fl-export-namer/releases/latest) · [📖 User guide](https://jay-xls.github.io/fl-export-namer/)
+### [⬇ Download the latest version](https://github.com/jlnorge/fl-export-namer/releases/latest) · [📖 User guide](https://jlnorge.github.io/fl-export-namer/)
 
 Windows 10/11 · free · no Python needed. Windows will say the app is from an unknown publisher
 (it isn't code-signed) - click **More info → Run anyway**.
@@ -26,7 +26,7 @@ Windows 10/11 · free · no Python needed. Windows will say the app is from an u
 - **Update notices** - tells you when a new version is out
 
 ## Found a bug / got an idea?
-[Open an issue](https://github.com/jay-xls/fl-export-namer/issues/new/choose) - attach your log
+[Open an issue](https://github.com/jlnorge/fl-export-namer/issues/new/choose) - attach your log
 (tray icon → **Open log**) for bugs.
 
 ---
