@@ -112,7 +112,7 @@ footer{border-top:1px solid var(--line);margin-top:56px;padding-top:16px;color:v
     <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="1" y="1" width="20" height="20" rx="4" fill="#1f2528" stroke="#f7a13d" stroke-width="1.5"/><g fill="#f7a13d"><rect x="4.5" y="11" width="2" height="6"/><rect x="7.6" y="7" width="2" height="10"/><rect x="10.7" y="5" width="2" height="12"/><rect x="13.8" y="9" width="2" height="8"/><rect x="16.9" y="7.5" width="1.6" height="9.5"/></g></svg>
     <span>FL Export Namer<span class="g"> guide</span></span>
   </a>
-  <a class="dl" href="https://github.com/jay-xls/fl-export-namer/releases/latest">download</a><span class="ver">v1.3.0 · windows</span>
+  <a class="dl" href="https://github.com/jlnorge/fl-export-namer/releases/latest">download</a><span class="ver">v1.3.1 · windows</span>
 </header>
 
 <div class="wrap">
@@ -143,8 +143,8 @@ footer{border-top:1px solid var(--line);margin-top:56px;padding-top:16px;color:v
 
 <main id="top">
   <h1>edit. 24.11.26</h1>
-  <p class="credits"><b>FL Export Namer v1.3.0</b>, made by <b>Jay</b>. Windows 10/11 · no Python needed · works with FL Studio project folders · free, share it with whoever.<br>
-  <a href="https://github.com/jay-xls/fl-export-namer/releases/latest">download</a> · <a href="https://github.com/jay-xls/fl-export-namer/issues/new/choose">report a bug / suggest a feature</a> · <a href="https://github.com/jay-xls/fl-export-namer">source on GitHub</a></p>
+  <p class="credits"><b>FL Export Namer v1.3.1</b>, made by <b>Jay</b>. Windows 10/11 · no Python needed · works with FL Studio project folders · free, share it with whoever.<br>
+  <a href="https://github.com/jlnorge/fl-export-namer/releases/latest">download</a> · <a href="https://github.com/jlnorge/fl-export-namer/issues/new/choose">report a bug / suggest a feature</a> · <a href="https://github.com/jlnorge/fl-export-namer">source on GitHub</a></p>
   <p class="syn">A small Windows app that watches your FL Studio projects folder. When you export a beat, it pops up with the name, BPM, key and next version number already filled in. Hit Enter and the file is renamed and filed into one tidy beats folder. It comes with <b>Beat Sorter</b> for the pile of old, randomly named exports: drop them in, and it works out the BPM and key from the audio.</p>
 
   <div class="jump" aria-label="Jump to">
@@ -177,13 +177,13 @@ footer{border-top:1px solid var(--line);margin-top:56px;padding-top:16px;color:v
   <h2 id="install">install</h2>
   <h3 id="setup-exe">setup.exe (recommended)</h3>
   <ol class="steps">
-    <li>Download <code>FL Export Namer Setup x.y.z.exe</code> from the <a href="https://github.com/jay-xls/fl-export-namer/releases/latest">latest release</a> and run it. It installs for your Windows user only, so there's no admin prompt.</li>
+    <li>Download <code>FL Export Namer Setup x.y.z.exe</code> from the <a href="https://github.com/jlnorge/fl-export-namer/releases/latest">latest release</a> and run it. It installs for your Windows user only, so there's no admin prompt.</li>
     <li>Leave both options ticked: <b>start the export watcher with Windows</b> and <b>Beat Sorter shortcut on the desktop</b>.</li>
     <li>Finish with "start the export watcher now" ticked. The setup window opens (see <a href="#first-run">first run</a>).</li>
   </ol>
   <p>You get Start menu entries for <b>FL Export Namer</b> (the watcher) and <b>Beat Sorter</b>, plus the desktop shortcut.</p>
   <h3 id="zip">zip version</h3>
-  <p>Grab the <code>.zip</code> from the <a href="https://github.com/jay-xls/fl-export-namer/releases/latest">same release page</a> and unzip it somewhere permanent, e.g. <code>Documents\Apps</code>, not Downloads. Run <code>FL Export Namer.exe</code>. Beat Sorter is the same exe with <code>--sorter</code> on the end. To get a Beat Sorter shortcut: right-click the exe → <i>Create shortcut</i> → shortcut Properties → add <code>&nbsp;--sorter</code> after the quotes in <b>Target</b>. To start it with Windows, use the toggle in <a href="#settings">settings</a>.</p>
+  <p>Grab the <code>.zip</code> from the <a href="https://github.com/jlnorge/fl-export-namer/releases/latest">same release page</a> and unzip it somewhere permanent, e.g. <code>Documents\Apps</code>, not Downloads. Run <code>FL Export Namer.exe</code>. Beat Sorter is the same exe with <code>--sorter</code> on the end. To get a Beat Sorter shortcut: right-click the exe → <i>Create shortcut</i> → shortcut Properties → add <code>&nbsp;--sorter</code> after the quotes in <b>Target</b>. To start it with Windows, use the toggle in <a href="#settings">settings</a>.</p>
   <h3 id="smartscreen">"windows protected your pc"</h3>
   <div class="warn"><p>The app isn't code-signed (that costs money every year), so Windows doesn't recognise the publisher. Click <b>More info</b> → <b>Run anyway</b>. Some antivirus tools also flag apps built this way (PyInstaller) by mistake. If yours quarantines it, restore it and add an exception, or skip it if you don't trust the source you got it from. Each release lists SHA256 checksums, so you can confirm your download matches what was built.</p></div>
 
@@ -352,7 +352,7 @@ footer{border-top:1px solid var(--line);margin-top:56px;padding-top:16px;color:v
     <dt>"already named and filed - nothing to do"</dt>
     <dd>That file is already exactly where and what it would be renamed to.</dd>
     <dt>still stuck?</dt>
-    <dd><a href="https://github.com/jay-xls/fl-export-namer/issues/new/choose">Open a bug report</a> and attach your log. It's the fastest way to get it fixed.</dd>
+    <dd><a href="https://github.com/jlnorge/fl-export-namer/issues/new/choose">Open a bug report</a> and attach your log. It's the fastest way to get it fixed.</dd>
     <dt>it starts twice / two tray icons</dt>
     <dd>It can't. A second launch quietly exits. A second Beat Sorter hands its files to the open window.</dd>
   </dl>
@@ -360,13 +360,17 @@ footer{border-top:1px solid var(--line);margin-top:56px;padding-top:16px;color:v
   <h2 id="uninstall">files, updates + uninstall</h2>
   <ul>
     <li>Settings, per-project memory and the log live in <code>%APPDATA%\FL Export Namer\</code>: <code>config.json</code>, <code>state.json</code>, <code>log.txt</code>.</li>
-    <li><b>Update:</b> when a toast says a new version is out, click <b>download the update</b> (or check the <a href="https://github.com/jay-xls/fl-export-namer/releases/latest">releases page</a>) and run the new Setup over the top. Your settings are kept.</li>
+    <li><b>Update:</b> when a toast says a new version is out, click <b>download the update</b> (or check the <a href="https://github.com/jlnorge/fl-export-namer/releases/latest">releases page</a>) and run the new Setup over the top. Your settings are kept.</li>
     <li><b>Uninstall:</b> Windows Settings → Apps → FL Export Namer → Uninstall. Your settings folder is kept in case you reinstall. Delete it to wipe everything.</li>
     <li>Your beats are never touched by uninstalling.</li>
   </ul>
 
   <h2 id="changelog">changelog</h2>
-  <p>Every version's notes are on the <a href="https://github.com/jay-xls/fl-export-namer/releases">releases page</a> (full history in <a href="https://github.com/jay-xls/fl-export-namer/blob/main/CHANGELOG.md">CHANGELOG.md</a>). Latest:</p>
+  <p>Every version's notes are on the <a href="https://github.com/jlnorge/fl-export-namer/releases">releases page</a> (full history in <a href="https://github.com/jlnorge/fl-export-namer/blob/main/CHANGELOG.md">CHANGELOG.md</a>). Latest:</p>
+  <h3>1.3.1 · 24.11.26</h3>
+  <ul>
+    <li>The project moved to <a href="https://github.com/jlnorge/fl-export-namer">github.com/jlnorge/fl-export-namer</a>. Update checks and links follow it; this guide now lives at <a href="https://jlnorge.github.io/fl-export-namer/">jlnorge.github.io/fl-export-namer</a>.</li>
+  </ul>
   <h3>1.3.0 · 24.11.26</h3>
   <ul>
     <li>New look: FL Studio's stock grey and orange by default.</li>
@@ -380,7 +384,7 @@ footer{border-top:1px solid var(--line);margin-top:56px;padding-top:16px;color:v
 
   <footer>
     <a href="#top">Full table of contents ↑</a>
-    <span>last edit 24.11.26 · 13 sections · v1.3.0</span>
+    <span>last edit 24.11.26 · 13 sections · v1.3.1</span>
   </footer>
 </main>
 </div>

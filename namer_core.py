@@ -36,9 +36,9 @@ import naming  # noqa: E402
 import theme  # noqa: E402
 
 APP = "FL Export Namer"
-__version__ = "1.3.0"
+__version__ = "1.3.1"
 # GitHub repo releases are published to (owner/name). Used by the update check.
-UPDATE_REPO = "jay-xls/fl-export-namer"
+UPDATE_REPO = "jlnorge/fl-export-namer"
 FROZEN = getattr(sys, "frozen", False)  # running from the PyInstaller build
 APPDIR = Path(os.environ.get("APPDATA") or (Path.home() / ".config")) / APP
 CONFIG_PATH = APPDIR / "config.json"

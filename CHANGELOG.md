@@ -4,6 +4,10 @@ Every release gets a section here **before** it's built - the release workflow
 uses it as the release notes and refuses to run without one.
 Versions: `MAJOR.MINOR.PATCH` - bug fix = patch, new feature = minor.
 
+## [1.3.1] - 2026-11-24
+### Changed
+- The project moved to github.com/jlnorge/fl-export-namer: the update check, download links and the guide (jlnorge.github.io/fl-export-namer) now point there.
+
 ## [1.3.0] - 2026-11-24
 ### Added
 - Theme setting: **Match FL Studio** (default) follows FL's current theme automatically, updating when FL closes. Also: FL default, any `.flstheme` file, or Custom.
