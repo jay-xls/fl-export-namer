@@ -38,7 +38,7 @@ import naming  # noqa: E402
 import theme  # noqa: E402
 
 APP = "DAW Export Fixer"
-__version__ = "1.5.0"
+__version__ = "1.6.0"
 # GitHub repo releases are published to (owner/name). Used by the update check.
 UPDATE_REPO = "jlnorge/daw-export-fixer"
 FROZEN = getattr(sys, "frozen", False)  # running from the PyInstaller build
@@ -75,8 +75,9 @@ def _default_ableton_watch() -> str:
 DEFAULT_CONFIG = {
     "watch_folder": _default_watch(),
     "beats_folder": str(Path.home() / "Music" / "FL Export"),
-    "template": "{name}_{bpm}bpm_{key}_v{version}",
-    "version_digits": 2,
+    "template": naming.DEFAULT_TEMPLATE,
+    "version_digits": 1,         # v1, v8, v12
+    "type_digits": 2,            # Master_v8_01
     "key_style": "short",        # short = Fm / F,  minmaj = Fmin / Fmaj
     "accidentals": "mixed",      # mixed = C# Eb F# Ab Bb, or "sharps" / "flats"
     "action": "move",            # move = file leaves the project folder, copy = original stays
@@ -182,6 +183,11 @@ def load_config():
             "Backup", "Recorded", "Audio", "Sliced", "Audio Logger", "Autosave"]:
         cfg["ignore_folders"] = DEFAULT_CONFIG["ignore_folders"]
         save_json(CONFIG_PATH, cfg)
+    # 1.6.0: earlier default name formats move to the one with export types (v1_01 style).
+    if saved.get("template") in naming.LEGACY_TEMPLATES:
+        cfg["template"], cfg["version_digits"] = DEFAULT_CONFIG["template"], DEFAULT_CONFIG["version_digits"]
+        save_json(CONFIG_PATH, cfg)
+        logging.info("name format updated to %s", cfg["template"])
     return cfg
 
 
@@ -336,6 +342,7 @@ class Job:
     als_info: AlsInfo | None = None
     als_key: str = ""                  # key the Ableton set suggests (kept so a user override sticks)
     bpm_trusted: bool = False          # BPM came from the project itself
+    type: str = ""                     # export type (naming.TYPES); none until picked in the popup
     project_key: str = ""
     name: str = ""
     name_source: str = ""
@@ -850,6 +857,9 @@ class ExportPopup(ThemedWindow):
         self.v_bpm = tk.StringVar(value=job.bpm)
         self.v_key = tk.StringVar(value=job.key)
         self.v_ver = tk.StringVar()
+        self.v_type = tk.StringVar(value=job.type)
+        self.v_tv = tk.StringVar()   # number of this export within its type
+        self.user_set_tv = False
         self.v_keep = tk.BooleanVar(value=app.default_keep())
         self.user_set_bpm = False
 
@@ -901,6 +911,19 @@ class ExportPopup(ThemedWindow):
         self.e_key.bind("<Key>", lambda e: setattr(self, "user_set_key", True))
 
         r += 1
+        label(b, f, "TYPE").grid(row=r, column=0, sticky="w")
+        self.type_row = tk.Frame(b, bg=C["bg"])
+        self.type_row.grid(row=r, column=1, columnspan=3, sticky="w")
+        self.type_btns = {}
+        for t in naming.TYPES:
+            lb = tk.Label(self.type_row, text=t.upper(), font=f.small, padx=12, pady=5, cursor="hand2")
+            lb.pack(side="left", padx=(0, 2))
+            lb.bind("<Button-1>", lambda e, t=t: self.pick_type(t))
+            self.type_btns[t] = lb
+        r += 1
+        self.type_hint = self.hint(r, "optional - click again to clear")
+
+        r += 1
         label(b, f, "VERSION").grid(row=r, column=0, sticky="w")
         row = tk.Frame(b, bg=C["bg"])
         row.grid(row=r, column=1, columnspan=3, sticky="w")
@@ -908,8 +931,16 @@ class ExportPopup(ThemedWindow):
         self.e_ver.pack(side="left", ipady=5)
         self.e_ver.bind("<Key>", lambda e: setattr(self, "user_set_version", True))
         self.stepper(row, self.v_ver, 1, mark_user=True)
+        self.tv_box = tk.Frame(row, bg=C["bg"])  # the type's own count, only shown once a type is picked
+        self.tv_label = tk.Label(self.tv_box, text="", bg=C["bg"], fg=C["accent_dim"], font=f.label)
+        self.tv_label.pack(side="left", padx=(16, 8))
+        self.e_tv = flat_entry(self.tv_box, f, 4, self.v_tv)
+        self.e_tv.pack(side="left", ipady=5)
+        self.e_tv.bind("<Key>", lambda e: setattr(self, "user_set_tv", True))
+        self.stepper(self.tv_box, self.v_tv, 1, on_bump=lambda: setattr(self, "user_set_tv", True))
         r += 1
         self.ver_hint = self.hint(r, "")
+        self.render_types()
 
         # Preview
         r += 1
@@ -945,7 +976,7 @@ class ExportPopup(ThemedWindow):
         FlatButton(bot, "SKIP", self.on_close, f).pack(side="right", padx=(0, 8))
 
         b.columnconfigure(3, weight=1)
-        for v in (self.v_name, self.v_bpm, self.v_key, self.v_ver, self.v_keep):
+        for v in (self.v_name, self.v_bpm, self.v_key, self.v_ver, self.v_tv, self.v_keep):
             v.trace_add("write", lambda *a: self.refresh())
         self.v_name.trace_add("write", lambda *a: self.suggest_version())
         self.bind("<Return>", lambda e: self.save())
@@ -966,7 +997,7 @@ class ExportPopup(ThemedWindow):
         lb.grid(row=row, column=1, columnspan=3, sticky="w", pady=(1, 6))
         return lb
 
-    def stepper(self, row, var, step, mark_user=False, mark_bpm=False):
+    def stepper(self, row, var, step, mark_user=False, mark_bpm=False, on_bump=None):
         def bump(d):
             try:
                 v = float(var.get() or 0) + d
@@ -976,6 +1007,8 @@ class ExportPopup(ThemedWindow):
                 self.user_set_version = True
             if mark_bpm:
                 self.user_set_bpm = True
+            if on_bump:
+                on_bump()
             var.set(naming.fmt_bpm(max(v, 1)) if var is self.v_bpm else str(int(max(v, 1))))
         for txt, d in (("−", -step), ("+", step)):
             lb = tk.Label(row, text=txt, bg=C["field"], fg=C["btn_text"], font=self.f.body, padx=9, pady=4,
@@ -984,6 +1017,26 @@ class ExportPopup(ThemedWindow):
             lb.bind("<Button-1>", lambda e, d=d: bump(d))
             lb.bind("<Enter>", lambda e, w=lb: w.config(bg=C["field_hi"]))
             lb.bind("<Leave>", lambda e, w=lb: w.config(bg=C["field"]))
+
+    # -- export type
+    def pick_type(self, t):
+        self.v_type.set("" if self.v_type.get() == t else t)  # click the selected one again = no type
+        self.user_set_tv = False
+        self.render_types()
+        self.suggest_version()
+        self.refresh()
+        self.show_resize()
+
+    def render_types(self):
+        cur = self.v_type.get()
+        for t, lb in self.type_btns.items():
+            on = t == cur
+            lb.config(bg=C["accent"] if on else C["field"], fg=C["on_accent"] if on else C["btn_text"])
+        if cur:
+            self.tv_label.config(text=cur.upper() + " #")
+            self.tv_box.pack(side="left")
+        else:
+            self.tv_box.pack_forget()
 
     def ask_bpm_estimate(self):
         if self.bpm_link is not None:
@@ -1080,14 +1133,21 @@ class ExportPopup(ThemedWindow):
         self.geometry(f"{max(self.width, self.winfo_reqwidth())}x{self.winfo_reqheight()}")
 
     def suggest_version(self):
-        if self.user_set_version:
-            return
-        cfg = self.cfg
+        cfg, t = self.cfg, self.v_type.get()
         d = dest_dir(cfg, self.v_name.get(), self.job_date())
-        nv = naming.next_version(d, cfg["template"], naming.sanitize(self.v_name.get()), cfg["version_digits"])
-        self.v_ver.set(str(nv))
-        self.ver_hint.config(text=(f"v{naming.fmt_version(nv - 1, cfg['version_digits'])} already in "
-                                   f"{short(str(d), 46)}" if nv > 1 else "first export of this beat"))
+        nv, ntv = naming.next_versions(d, cfg["template"], naming.sanitize(self.v_name.get()), t)
+        if not self.user_set_version:
+            self.v_ver.set(str(nv))
+        if t and not self.user_set_tv:
+            self.v_tv.set(str(ntv))
+        if self.user_set_version and (not t or self.user_set_tv):
+            return
+        msg = (f"v{naming.fmt_version(nv - 1, cfg['version_digits'])} already in {short(str(d), 40)}"
+               if nv > 1 else "first export of this beat")
+        if t:
+            nth = {1: "1st", 2: "2nd", 3: "3rd"}.get(ntv, f"{ntv}th")
+            msg += f"  ·  {nth} {t}"
+        self.ver_hint.config(text=msg)
 
     def job_date(self) -> float:
         try:
@@ -1098,7 +1158,8 @@ class ExportPopup(ThemedWindow):
     def targets(self):
         cfg, job = self.cfg, self.job
         stem = naming.build_stem(cfg["template"], self.v_name.get(), self.v_bpm.get(), self.v_key.get(),
-                                 self.v_ver.get(), cfg["version_digits"])
+                                 self.v_ver.get(), cfg["version_digits"], self.v_type.get(), self.v_tv.get(),
+                                 cfg.get("type_digits", 2))
         d = dest_dir(cfg, self.v_name.get(), self.job_date())
         if job.kind == "stems":
             sd = d / f"{stem}_stems"
@@ -1142,6 +1203,12 @@ class ExportPopup(ThemedWindow):
         except ValueError:
             self.e_ver.config(highlightbackground=C["warn"])
             return
+        if self.v_type.get():
+            try:
+                int(self.v_tv.get())
+            except ValueError:
+                self.e_tv.config(highlightbackground=C["warn"])
+                return
         stem, d, pairs = self.targets()
         ok = self.app.apply(self.job, pairs, keep=self.v_keep.get(),
                             name=self.v_name.get().strip(), bpm=self.v_bpm.get().strip(),
@@ -1261,7 +1328,8 @@ class SettingsWindow(ThemedWindow):
         flat_entry(b, f, 40, self.v_tmpl).grid(row=r, column=1, columnspan=2, sticky="ew", ipady=4)
         self.example = label(b, f, "", fg=C["accent"], font=f.small)
         self.example.grid(row=r + 1, column=1, columnspan=2, sticky="w", pady=(1, 0))
-        label(b, f, "tokens: {name} {bpm} {key} {version} {date}", fg=C["muted"], font=f.small).grid(
+        label(b, f, "tokens: {name} {bpm} {key} {type} {version} {typeversion} {date}", fg=C["muted"],
+              font=f.small).grid(
             row=r + 2, column=1, columnspan=2, sticky="w", pady=(0, 8))
         r += 3
 
@@ -1402,7 +1470,9 @@ class SettingsWindow(ThemedWindow):
     def update_example(self):
         t = self.v_tmpl.get()
         ok = "{name}" in t and "{version}" in t
-        ex = naming.build_stem(t, "Nightdrive", 140, "Fm", 3) + ".wav" if ok else "needs at least {name} and {version}"
+        ex = (naming.build_stem(t, "Nightdrive", 140, "Fm", 8, self.draft.get("version_digits", 1), "Master", 1,
+                                self.draft.get("type_digits", 2)) + ".wav" if ok
+              else "needs at least {name} and {version}")
         self.example.config(text=("e.g.  " if ok else "") + ex, fg=C["accent"] if ok else C["warn"])
 
     def save(self):

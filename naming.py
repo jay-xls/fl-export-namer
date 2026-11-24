@@ -6,9 +6,16 @@ import re
 from datetime import date
 from pathlib import Path
 
-TOKENS = ("name", "bpm", "key", "version", "date")
+TOKENS = ("name", "bpm", "key", "type", "version", "typeversion", "date")
 ILLEGAL = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
-_TOKEN_RE = re.compile(r"\{(name|bpm|key|version|date)\}")
+_TOKEN_RE = re.compile(r"\{(name|bpm|key|type|version|typeversion|date)\}")
+
+# Export types picked in the popup. {version} counts every export of a beat; {typeversion}
+# counts that beat's exports of the chosen type (8th export, 1st Master -> Master_v8_01).
+TYPES = ("Stem", "Demo", "Mix", "Master")
+DEFAULT_TEMPLATE = "{name}_{bpm}bpm_{key}_{type}_v{version}_{typeversion}"
+# Earlier default formats: versions in files named this way are still counted.
+LEGACY_TEMPLATES = ("{name}_{bpm}bpm_{key}_v{version}", "{name}_{bpm}bpm_{key}_v{version}_{type}")
 
 
 def sanitize(s: str) -> str:
@@ -34,12 +41,17 @@ def fmt_version(v, digits: int = 2) -> str:
         return sanitize(str(v))
 
 
-def build_stem(template: str, name: str, bpm, key: str, version, digits: int = 2) -> str:
+def build_stem(template: str, name: str, bpm, key: str, version, digits: int = 2,
+               type_: str = "", typeversion=None, type_digits: int = 2) -> str:
+    """No type = {type} and {typeversion} are left out, with their separators."""
+    type_ = sanitize(type_ or "")
     vals = {
         "name": sanitize(name) or "Untitled",
         "bpm": fmt_bpm(bpm),
         "key": sanitize(key),
+        "type": type_,
         "version": fmt_version(version, digits),
+        "typeversion": fmt_version(typeversion, type_digits) if type_ and typeversion not in (None, "") else "",
         "date": date.today().strftime("%Y-%m-%d"),
     }
     t = template
@@ -65,8 +77,12 @@ def template_regex(template: str, name: str | None = None) -> re.Pattern:
             parts.append(r"(?P<bpm>\d{2,3}(?:\.\d+)?)?")
         elif tok == "key":
             parts.append(r"(?P<key>[A-G](?:#|b)?(?:m|min|maj| minor| major)?)?")
+        elif tok == "type":
+            parts.append(r"(?P<type>" + "|".join(TYPES) + r")?")
         elif tok == "version":
             parts.append(r"(?P<version>\d+)")
+        elif tok == "typeversion":
+            parts.append(r"(?P<typeversion>\d+)?")
         elif tok == "date":
             parts.append(r"\d{4}-\d{2}-\d{2}")
         pos = m.end()
@@ -117,12 +133,13 @@ def clean_project_name(stem: str) -> str:
     return s or stem
 
 
-def next_version(folder: Path, template: str, name: str, digits: int = 2) -> int:
-    """Highest existing version for `name` in folder (and its subfolders one deep) + 1."""
+def next_versions(folder: Path, template: str, name: str, type_: str = "") -> tuple[int, int]:
+    """(next overall version, next version of `type_`) for beat `name`, from the files in folder
+    (and its subfolders one deep). Names in the earlier default formats count too."""
     if not folder.exists():
-        return 1
-    rx = template_regex(template, name)
-    best = 0
+        return 1, 1
+    rxs = [template_regex(t, name) for t in dict.fromkeys((template,) + LEGACY_TEMPLATES)]
+    best = best_type = 0
     candidates = list(folder.iterdir())
     for sub in [p for p in candidates if p.is_dir()]:
         try:
@@ -130,10 +147,22 @@ def next_version(folder: Path, template: str, name: str, digits: int = 2) -> int
         except OSError:
             pass
     for p in candidates:
-        m = rx.match(p.stem if p.is_file() else p.name.removesuffix("_stems").removesuffix(" stems"))
-        if m and m.groupdict().get("version"):
+        stem = p.stem if p.is_file() else p.name.removesuffix("_stems").removesuffix(" stems")
+        for rx in rxs:
+            m = rx.match(stem)
+            if not (m and m.groupdict().get("version")):
+                continue
             best = max(best, int(m.group("version")))
-    return best + 1
+            g = m.groupdict()
+            if type_ and (g.get("type") or "").lower() == type_.lower():
+                best_type = max(best_type, int(g.get("typeversion") or 1))
+            break
+    return best + 1, best_type + 1
+
+
+def next_version(folder: Path, template: str, name: str, digits: int = 2) -> int:
+    """Highest existing version for `name` in folder (and its subfolders one deep) + 1."""
+    return next_versions(folder, template, name)[0]
 
 
 def unique_path(p: Path) -> Path:

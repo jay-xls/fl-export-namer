@@ -98,3 +98,49 @@ def test_settings_carry_over_from_the_old_name(tmp_path, monkeypatch):
     (new / "config.json").write_text("{}", encoding="utf-8")
     c.migrate_old_name()                                 # never overwrites the new folder again
     assert (new / "config.json").read_text(encoding="utf-8") == "{}"
+
+
+def test_old_default_name_format_is_upgraded(monkeypatch, tmp_path):
+    import naming
+    monkeypatch.setattr(c, "CONFIG_PATH", tmp_path / "config.json")
+    c.save_json(c.CONFIG_PATH, {"template": "{name}_{bpm}bpm_{key}_v{version}_{type}", "version_digits": 2})
+    cfg = c.load_config()
+    assert (cfg["template"], cfg["version_digits"]) == (naming.DEFAULT_TEMPLATE, 1)
+    c.save_json(c.CONFIG_PATH, {"template": "{name} - {key} (v{version})", "version_digits": 2})
+    cfg = c.load_config()                                   # your own format is left alone
+    assert (cfg["template"], cfg["version_digits"]) == ("{name} - {key} (v{version})", 2)
+
+
+def test_popup_type_picker_names_the_file(tmp_path, monkeypatch):
+    """Pick a type in the popup: version counts every export, the type number counts that type."""
+    import tkinter as tk
+    import pytest
+    import theme
+    monkeypatch.setattr(c, "CONFIG_PATH", tmp_path / "config.json")
+    try:
+        app = c.App()
+    except tk.TclError:
+        pytest.skip("no display")
+    try:
+        app.cfg.update(beats_folder=str(tmp_path / "beats"), folder_date=False, theme="default")
+        beat = tmp_path / "beats" / "SynthTrap"
+        beat.mkdir(parents=True)
+        for i in range(1, 8):
+            (beat / f"SynthTrap_120bpm_Fm_Demo_v{i}_0{i}.wav").touch()
+        wav = tmp_path / "SynthTrap.wav"
+        wav.write_bytes(b"RIFF")
+        job = c.Job(files=[wav], name="SynthTrap", bpm="120", key="Fm")
+        p = c.ExportPopup(app, job)
+        assert p.v_type.get() == "" and p.targets()[0] == "SynthTrap_120bpm_Fm_v8"   # none until picked
+        p.pick_type("Master")
+        assert p.targets()[0] == "SynthTrap_120bpm_Fm_Master_v8_01"
+        assert "1st Master" in p.ver_hint.cget("text")
+        p.pick_type("Demo")
+        assert p.targets()[0] == "SynthTrap_120bpm_Fm_Demo_v8_08"
+        p.pick_type("Demo")                                   # click again: no type
+        assert p.targets()[0] == "SynthTrap_120bpm_Fm_v8"
+        p.destroy()
+    finally:
+        c.C.clear()
+        c.C.update(theme.FL_DEFAULT)
+        app.root.destroy()

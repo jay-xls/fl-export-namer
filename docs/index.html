@@ -112,7 +112,7 @@ footer{border-top:1px solid var(--line);margin-top:56px;padding-top:16px;color:v
     <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="1" y="1" width="20" height="20" rx="4" fill="#1f2528" stroke="#f7a13d" stroke-width="1.5"/><g fill="#f7a13d"><rect x="4.5" y="11" width="2" height="6"/><rect x="7.6" y="7" width="2" height="10"/><rect x="10.7" y="5" width="2" height="12"/><rect x="13.8" y="9" width="2" height="8"/><rect x="16.9" y="7.5" width="1.6" height="9.5"/></g></svg>
     <span>DAW Export Fixer<span class="g"> guide</span></span>
   </a>
-  <a class="dl" href="https://github.com/jlnorge/daw-export-fixer/releases/latest">download</a><span class="ver">v1.5.0 · windows</span>
+  <a class="dl" href="https://github.com/jlnorge/daw-export-fixer/releases/latest">download</a><span class="ver">v1.6.0 · windows</span>
 </header>
 
 <div class="wrap">
@@ -145,7 +145,7 @@ footer{border-top:1px solid var(--line);margin-top:56px;padding-top:16px;color:v
 
 <main id="top">
   <h1>edit. 24.11.26</h1>
-  <p class="credits"><b>DAW Export Fixer v1.5.0</b>, made by <b>Jay</b>. Windows 10/11 · no Python needed · works with FL Studio and Ableton Live project folders · free, share it with whoever.<br>
+  <p class="credits"><b>DAW Export Fixer v1.6.0</b>, made by <b>Jay</b>. Windows 10/11 · no Python needed · works with FL Studio and Ableton Live project folders · free, share it with whoever.<br>
   <a href="https://github.com/jlnorge/daw-export-fixer/releases/latest">download</a> · <a href="https://github.com/jlnorge/daw-export-fixer/issues/new/choose">report a bug / suggest a feature</a> · <a href="https://github.com/jlnorge/daw-export-fixer">source on GitHub</a></p>
   <p class="syn">A small Windows app that watches your FL Studio projects folder, your Ableton Live projects folder, or both at once. When you export a beat, it pops up with the name, BPM, key and next version number already filled in. Hit Enter and the file is renamed and filed into one tidy beats folder. It comes with <b>Beat Sorter</b> for the pile of old, randomly named exports: drop them in, and it works out the BPM and key from the audio.</p>
 
@@ -155,7 +155,7 @@ footer{border-top:1px solid var(--line);margin-top:56px;padding-top:16px;color:v
 
   <div class="hero">
     <figure>
-      <img class="shot" src="img/popup.png" width="580" height="558" alt="The export popup: name Nightdrive, BPM 140 read from project, key Fm detected with Ab and Cm as alternatives, version 1, saving as Nightdrive_140bpm_Fm_v01.wav plus mp3">
+      <img class="shot" src="img/popup.png" width="580" height="615" alt="The export popup: name Nightdrive, BPM 140 read from project, key Fm detected with Ab and Cm as alternatives, type Master selected, version 1 and Master number 1, saving as Nightdrive_140bpm_Fm_Master_v1_01.wav plus mp3">
       <figcaption>what you see a few seconds after exporting from FL</figcaption>
     </figure>
     <ul class="parts">
@@ -163,7 +163,8 @@ footer{border-top:1px solid var(--line);margin-top:56px;padding-top:16px;color:v
       <li><b>NAME</b><span>from your project (or what you called it last time).</span></li>
       <li><b>BPM</b><span>read straight out of the saved .flp, not guessed.</span></li>
       <li><b>KEY</b><span>detected from the audio. The orange chips are the top 3 guesses; click one to swap.</span></li>
-      <li><b>VERSION</b><span>the next free number for that beat.</span></li>
+      <li><b>TYPE</b><span>stem, demo, mix or master. Optional: nothing is picked until you click one.</span></li>
+      <li><b>VERSION</b><span>the next free number for that beat, counting every export. With a type picked, a second box counts that type's exports (1st Master = 01).</span></li>
       <li><b>SAVES AS</b><span>the exact file name and folder it'll go to. Updates as you type.</span></li>
     </ul>
   </div>
@@ -237,14 +238,17 @@ footer{border-top:1px solid var(--line);margin-top:56px;padding-top:16px;color:v
     <tr><td>name</td><td>what you saved this project as last time → project name if it's already in your format → Project Info title → .flp file name with junk removed (<code>_2</code>, <code>140bpm</code>, <code>(autosave)</code>)</td><td>FL's auto-name like <code>Project_23</code>. It's pre-selected, so just type over it.</td></tr>
     <tr><td>bpm</td><td>the saved project's tempo → the file name → estimated from the audio. <b>check against audio</b> adds the audio's top 3 as chips.</td><td>no tempo saved (FL default 140), couldn't read it, or the project's older than the export</td></tr>
     <tr><td>key</td><td>Ableton only: the set's scale (see <a href="#ableton-read">above</a>) → what you used last time for this project → detected from the audio. Top 3 as chips, <b>▾</b> lists all 24 keys.</td><td>the detector's unsure. Check it.</td></tr>
-    <tr><td>version</td><td>highest existing version of that beat in your beats folder + 1. Recalculates if you change the name.</td><td>-</td></tr>
+    <tr><td>type</td><td>nothing until you click <b>STEM</b>, <b>DEMO</b>, <b>MIX</b> or <b>MASTER</b>. Click the selected one again to clear it. No type = the type and its number are left out of the name.</td><td>-</td></tr>
+    <tr><td>version</td><td>every export of that beat counts: highest existing version in your beats folder + 1, whatever the type. Recalculates if you change the name.</td><td>-</td></tr>
+    <tr><td>type #</td><td>shown once a type is picked: how many exports of that type this beat has had + 1. The 8th export overall that's the 1st Master is <code>Master_v8_01</code>.</td><td>-</td></tr>
   </tbody></table>
   <p>Once you've saved a beat, its name and key are remembered for that project, so the next export of it is usually one <kbd>Enter</kbd>.</p>
   <h3 id="keys">buttons + keys</h3>
   <table><thead><tr><th>do</th><th>how</th></tr></thead><tbody>
     <tr><td>save</td><td><kbd>Enter</kbd> or <b>SAVE</b></td></tr>
     <tr><td>skip (file left alone)</td><td><kbd>Esc</kbd>, <b>SKIP</b> or ✕</td></tr>
-    <tr><td>nudge bpm / version</td><td>the <b>−</b> <b>+</b> buttons</td></tr>
+    <tr><td>nudge bpm / version / type #</td><td>the <b>−</b> <b>+</b> buttons</td></tr>
+    <tr><td>pick / clear the type</td><td>click a type; click it again for none</td></tr>
     <tr><td>copy instead of move</td><td>tick <b>keep original in project folder</b></td></tr>
     <tr><td>never ask about a folder again</td><td><b>ignore this folder</b></td></tr>
     <tr><td>move the popup</td><td>drag its title bar</td></tr>
@@ -254,16 +258,18 @@ footer{border-top:1px solid var(--line);margin-top:56px;padding-top:16px;color:v
   <h2 id="files">where files go</h2>
 <pre>Music\FL Export\
   Nightdrive 24.11.2026\
-    Nightdrive_140bpm_Fm_v01.wav
-    Nightdrive_140bpm_Fm_v01.mp3
-    Nightdrive_140bpm_Fm_v02.wav
-    Nightdrive_140bpm_Fm_v03_stems\
-      Nightdrive_140bpm_Fm_v03_Kick.wav
-      Nightdrive_140bpm_Fm_v03_808.wav
+    Nightdrive_140bpm_Fm_Demo_v1_01.wav
+    Nightdrive_140bpm_Fm_Demo_v1_01.mp3
+    Nightdrive_140bpm_Fm_Demo_v2_02.wav
+    Nightdrive_140bpm_Fm_Stem_v3_01_stems\
+      Nightdrive_140bpm_Fm_Stem_v3_01_Kick.wav
+      Nightdrive_140bpm_Fm_Stem_v3_01_808.wav
+    Nightdrive_140bpm_Fm_Mix_v4_01.wav
+    Nightdrive_140bpm_Fm_Master_v5_01.wav
   Dusty Loop 09.06.2024\
-    Dusty Loop_90bpm_Fm_v01.wav</pre>
+    Dusty Loop_90bpm_Fm_v1.wav           (no type picked)</pre>
   <h3 id="versions">versions + dated folders</h3>
-  <p>Each beat gets its own folder named <b>name + DD.MM.YYYY</b>. The date is the day of its <i>first</i> export. Later versions go into the same folder whatever the date, so v04 next month still sits next to v01–v03. Versions are counted per beat name, across BPM/key changes. If a file name already exists, the new one gets <code>(2)</code> on the end. Nothing is ever overwritten.</p>
+  <p>Each beat gets its own folder named <b>name + DD.MM.YYYY</b>. The date is the day of its <i>first</i> export. Later versions go into the same folder whatever the date, so v4 next month still sits next to v1–v3. Versions are counted per beat name, across BPM/key changes and across types; the type number after it counts only that type. Files named in the older format (<code>…_v03</code>) still count. If a file name already exists, the new one gets <code>(2)</code> on the end. Nothing is ever overwritten.</p>
   <h3 id="stems">stems + multi-format</h3>
   <p>WAV + MP3 (or any mix of formats) from one render = one version, same name, different extensions. <i>Split mixer tracks</i> renders go into a <code>…_stems</code> folder, each file keeping its track name.</p>
   <p>Changed your mind? Tray icon → <b>Undo last rename</b> puts the files back.</p>
@@ -272,7 +278,7 @@ footer{border-top:1px solid var(--line);margin-top:56px;padding-top:16px;color:v
   <p>For everything you exported <i>before</i> installing this: random names, no project folder, BPM and key unknown. Same popup, same naming and folders, but it works everything out from the audio itself.</p>
   <div class="pair">
     <figure><img class="shot" src="img/sorter.png" width="600" height="560" alt="Beat Sorter window with FL Studio / Ableton tabs, a large drop zone, a recent list of sorted files and the destination folder in the footer"><figcaption>the drop window</figcaption></figure>
-    <figure><img class="shot" src="img/sorter-popup.png" width="580" height="558" alt="Beat Sorter popup for 'dark trap 140 bpm Am final (1).wav': name cleaned to dark trap, BPM 140 from the file name with estimates 140, 93.5 and 70, key Am from the file name, keep original file ticked so it's copied"><figcaption>an old file: name cleaned up, bpm + key read from the file name, audio estimates beside them</figcaption></figure>
+    <figure><img class="shot" src="img/sorter-popup.png" width="580" height="615" alt="Beat Sorter popup for 'dark trap 140 bpm Am final (1).wav': name cleaned to dark trap, BPM 140 from the file name with estimates 140, 93.5 and 70, key Am from the file name, keep original file ticked so it's copied"><figcaption>an old file: name cleaned up, bpm + key read from the file name, audio estimates beside them</figcaption></figure>
   </div>
   <h3 id="sorter-use">using it</h3>
   <ul>
@@ -349,15 +355,17 @@ footer{border-top:1px solid var(--line);margin-top:56px;padding-top:16px;color:v
   <div class="note"><p><b>close, not exact.</b> FL's theme files don't spell out every panel colour. Most are FL's own grey shifted by the theme's hue / saturation / lightness sliders, so the app works them out. It gets close. If something's a shade off, switch to <b>custom</b> and fix it with the eyedropper.</p></div>
 
   <h2 id="format">name format</h2>
-  <p>Default: <code>{name}_{bpm}bpm_{key}_v{version}</code>. Must contain <code>{name}</code> and <code>{version}</code>.</p>
+  <p>Default: <code>{name}_{bpm}bpm_{key}_{type}_v{version}_{typeversion}</code>, e.g. <code>SynthTrap_120bpm_Fm_Master_v8_01</code>. Must contain <code>{name}</code> and <code>{version}</code>. If you were on the old default (<code>…_v{version}</code>), it's switched to this one for you; your own formats are left alone.</p>
   <table><thead><tr><th>token</th><th>becomes</th></tr></thead><tbody>
     <tr><td><code>{name}</code></td><td>beat name</td></tr>
     <tr><td><code>{bpm}</code></td><td><code>140</code>, or <code>92.5</code> when it isn't whole</td></tr>
     <tr><td><code>{key}</code></td><td><code>Fm</code>, <code>C#</code>… per key style</td></tr>
-    <tr><td><code>{version}</code></td><td><code>03</code> (2 digits)</td></tr>
+    <tr><td><code>{type}</code></td><td><code>Stem</code>, <code>Demo</code>, <code>Mix</code> or <code>Master</code>, as picked in the popup</td></tr>
+    <tr><td><code>{version}</code></td><td>every export of the beat: <code>8</code></td></tr>
+    <tr><td><code>{typeversion}</code></td><td>that type's exports of the beat: <code>01</code> (2 digits)</td></tr>
     <tr><td><code>{date}</code></td><td>today, <code>2026-11-24</code></td></tr>
   </tbody></table>
-  <p>An empty field disappears with its separator. No key gives <code>Nightdrive_140bpm_v01</code>, not <code>Nightdrive_140bpm__v01</code>. Another layout: <code>{name} - {key} - {bpm} BPM (v{version})</code> → <code>Nightdrive - Fm - 140 BPM (v03)</code>.</p>
+  <p>An empty field disappears with its separator. No key and no type gives <code>Nightdrive_140bpm_v1</code>, not <code>Nightdrive_140bpm___v1_</code>. Separators are up to you: <code>{name}-{bpm}bpm-{key}-{type}-v{version}_{typeversion}</code> → <code>SynthTrap-120bpm-Fm-Master-v8_02</code>. Another layout: <code>{name} - {key} - {bpm} BPM (v{version})</code> → <code>Nightdrive - Fm - 140 BPM (v3)</code>.</p>
 
   <h2 id="accuracy">how accurate is it</h2>
   <table class="stack"><thead><tr><th>thing</th><th>how good</th><th>usual mistake</th></tr></thead><tbody>
@@ -400,6 +408,11 @@ footer{border-top:1px solid var(--line);margin-top:56px;padding-top:16px;color:v
 
   <h2 id="changelog">changelog</h2>
   <p>Every version's notes are on the <a href="https://github.com/jlnorge/daw-export-fixer/releases">releases page</a> (full history in <a href="https://github.com/jlnorge/daw-export-fixer/blob/main/CHANGELOG.md">CHANGELOG.md</a>). Latest:</p>
+  <h3>1.6.0 · 24.11.26</h3>
+  <ul>
+    <li><b>Export types:</b> pick Stem, Demo, Mix or Master in the popup. The version counts every export of a beat; a second number counts that type, e.g. the 8th export that's the 1st Master is <code>SynthTrap_120bpm_Fm_Master_v8_01</code>. See <a href="#format">name format</a>.</li>
+    <li>New default name format with the version at the end. Your old default is switched over automatically and existing files keep counting.</li>
+  </ul>
   <h3>1.5.0 · 24.11.26</h3>
   <ul>
     <li>New name: <b>FL Export Namer is now DAW Export Fixer</b>, since it handles Ableton Live too. New home: <a href="https://github.com/jlnorge/daw-export-fixer">github.com/jlnorge/daw-export-fixer</a>, guide at <a href="https://jlnorge.github.io/daw-export-fixer/">jlnorge.github.io/daw-export-fixer</a>.</li>
