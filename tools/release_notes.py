@@ -6,6 +6,9 @@ import re
 import sys
 from pathlib import Path
 
+# The release runs on Windows, where redirected output would otherwise be cp1252 and
+# characters like "…" end up as "�" on the release page.
+sys.stdout.reconfigure(encoding="utf-8")
 version = sys.argv[1].lstrip("v")
 text = Path(__file__).resolve().parent.parent.joinpath("CHANGELOG.md").read_text(encoding="utf-8")
 m = re.search(rf"^## \[?{re.escape(version)}\]?.*?$(.*?)(?=^## |\Z)", text, re.M | re.S)
