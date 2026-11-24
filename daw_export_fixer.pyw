@@ -1,4 +1,4 @@
-"""FL Export Namer - watches FL Studio renders and names them. See README.txt."""
+"""DAW Export Fixer - watches FL Studio renders and names them. See README.txt."""
 import sys
 from pathlib import Path
 

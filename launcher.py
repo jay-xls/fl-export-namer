@@ -1,7 +1,7 @@
 """Entry point for the packaged app.
 
-    FL Export Namer.exe            -> watcher (system tray)
-    FL Export Namer.exe --sorter   -> Beat Sorter window (files/folders can follow)
+    DAW Export Fixer.exe            -> watcher (system tray)
+    DAW Export Fixer.exe --sorter   -> Beat Sorter window (files/folders can follow)
 """
 import sys
 
@@ -13,7 +13,7 @@ def selftest() -> int:
     from pathlib import Path
     import numpy as np
     import namer_core
-    out, ok = [f"FL Export Namer v{namer_core.__version__} selftest"], True
+    out, ok = [f"DAW Export Fixer v{namer_core.__version__} selftest"], True
 
     def check(name, fn):
         nonlocal ok
@@ -42,7 +42,7 @@ def selftest() -> int:
         beat = int(sr * 60 / bpm)
         for i in range(0, len(y) - 4000, beat):         # clicks on every beat
             y[i:i + 4000] += 0.6 * np.exp(-np.arange(4000) / 300) * np.sin(2 * np.pi * 60 * np.arange(4000) / sr)
-        p = Path(tempfile.gettempdir()) / "fl_export_namer_selftest.wav"
+        p = Path(tempfile.gettempdir()) / "daw_export_fixer_selftest.wav"
         sf.write(p, y, sr)
         b = estimate_bpm(str(p))
         k = detect_key(str(p), bpm=b[0][0] if b else None)
@@ -59,7 +59,7 @@ def selftest() -> int:
     def ableton():
         import gzip
         from als_reader import read_als
-        p = Path(tempfile.gettempdir()) / "fl_export_namer_selftest.als"
+        p = Path(tempfile.gettempdir()) / "daw_export_fixer_selftest.als"
         p.write_bytes(gzip.compress(b'<?xml version="1.0"?><Ableton Creator="Ableton Live 12.1"><LiveSet>'
                                     b'<MainTrack><DeviceChain><Mixer><Tempo><Manual Value="128"/></Tempo></Mixer>'
                                     b'</DeviceChain></MainTrack></LiveSet></Ableton>'))

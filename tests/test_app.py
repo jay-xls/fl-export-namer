@@ -21,7 +21,7 @@ def test_version_compare_is_numeric():
 
 
 def test_update_check_is_silent_without_a_repo(monkeypatch):
-    monkeypatch.setattr(c, "UPDATE_REPO", "OWNER/fl-export-namer")
+    monkeypatch.setattr(c, "UPDATE_REPO", "OWNER/daw-export-fixer")
     assert c.fetch_latest_release() is None
 
 
@@ -83,3 +83,18 @@ def test_app_starts_with_a_theme_that_differs_from_the_stock_look(tmp_path, monk
         c.C.clear()
         c.C.update(theme.FL_DEFAULT)
         app.root.destroy()
+
+
+def test_settings_carry_over_from_the_old_name(tmp_path, monkeypatch):
+    """1.5.0 rename: %APPDATA%\\FL Export Namer is copied to %APPDATA%\\DAW Export Fixer once, and kept."""
+    old, new = tmp_path / "FL Export Namer", tmp_path / "DAW Export Fixer"
+    old.mkdir()
+    (old / "config.json").write_text('{"beats_folder": "X"}', encoding="utf-8")
+    monkeypatch.setattr(c, "OLD_APPDIR", old)
+    monkeypatch.setattr(c, "APPDIR", new)
+    c.migrate_old_name()
+    assert (new / "config.json").read_text(encoding="utf-8") == '{"beats_folder": "X"}'
+    assert (old / "config.json").exists()               # old folder kept as a backup
+    (new / "config.json").write_text("{}", encoding="utf-8")
+    c.migrate_old_name()                                 # never overwrites the new folder again
+    assert (new / "config.json").read_text(encoding="utf-8") == "{}"

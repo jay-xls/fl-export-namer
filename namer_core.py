@@ -1,12 +1,12 @@
-"""Shared core for FL Export Namer (watcher) and Beat Sorter (drop files).
+"""Shared core for DAW Export Fixer (watcher) and Beat Sorter (drop files).
 
-FL Export Namer - watches FL Studio and Ableton Live renders, fills in BPM / key / version,
+DAW Export Fixer - watches FL Studio and Ableton Live renders, fills in BPM / key / version,
 lets you confirm in a popup styled like the program the export came from, then renames
 and files the export.
 
-Run:  pyw fl_export_namer.pyw          (normal, sits in the system tray)
-      py  fl_export_namer.pyw --demo   (shows the popup with sample data)
-      py  fl_export_namer.pyw --test "C:\\path\\to\\render.wav"   (treat a file as a fresh export)
+Run:  pyw daw_export_fixer.pyw          (normal, sits in the system tray)
+      py  daw_export_fixer.pyw --demo   (shows the popup with sample data)
+      py  daw_export_fixer.pyw --test "C:\\path\\to\\render.wav"   (treat a file as a fresh export)
 """
 
 from __future__ import annotations
@@ -37,15 +37,17 @@ from flp_reader import FlpInfo, read_flp  # noqa: E402
 import naming  # noqa: E402
 import theme  # noqa: E402
 
-APP = "FL Export Namer"
-__version__ = "1.4.1"
+APP = "DAW Export Fixer"
+__version__ = "1.5.0"
 # GitHub repo releases are published to (owner/name). Used by the update check.
-UPDATE_REPO = "jlnorge/fl-export-namer"
+UPDATE_REPO = "jlnorge/daw-export-fixer"
 FROZEN = getattr(sys, "frozen", False)  # running from the PyInstaller build
 APPDIR = Path(os.environ.get("APPDATA") or (Path.home() / ".config")) / APP
 CONFIG_PATH = APPDIR / "config.json"
 STATE_PATH = APPDIR / "state.json"
 LOG_PATH = APPDIR / "log.txt"
+OLD_APP = "FL Export Namer"                  # the app's name before 1.5.0
+OLD_APPDIR = APPDIR.parent / OLD_APP
 
 AUDIO_EXTS = {".wav", ".mp3", ".flac", ".ogg", ".m4a", ".aif", ".aiff"}
 DETECTABLE = [".wav", ".flac", ".aif", ".aiff", ".ogg", ".mp3"]
@@ -207,7 +209,7 @@ def launch_command(sorter: bool = False) -> list[str]:
         return [sys.executable] + (["--sorter"] if sorter else [])
     exe = Path(sys.executable)
     pyw = exe.with_name("pythonw.exe")
-    return [str(pyw if pyw.exists() else exe), str(HERE / ("beat_sorter.pyw" if sorter else "fl_export_namer.pyw"))]
+    return [str(pyw if pyw.exists() else exe), str(HERE / ("beat_sorter.pyw" if sorter else "daw_export_fixer.pyw"))]
 
 
 def startup_enabled() -> bool:
@@ -238,6 +240,36 @@ def set_startup(on: bool):
                 pass
     if not on and STARTUP_LNK.exists():
         STARTUP_LNK.unlink()
+
+
+def migrate_old_name():
+    """1.5.0 renamed FL Export Namer to DAW Export Fixer: bring settings, history and the
+    startup entry over. The old settings folder is copied, not moved, so it stays as a backup."""
+    if OLD_APPDIR.is_dir() and not APPDIR.exists():
+        try:
+            shutil.copytree(OLD_APPDIR, APPDIR)
+        except OSError:
+            pass  # starts fresh; the old folder is still there
+    if not sys.platform.startswith("win"):
+        return
+    old_lnk = STARTUP_LNK.with_name(f"{OLD_APP}.lnk")  # from the old setup.bat (points at a file that's gone)
+    had_startup = old_lnk.exists()
+    try:
+        import winreg
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, RUN_KEY, 0,
+                            winreg.KEY_QUERY_VALUE | winreg.KEY_SET_VALUE) as k:
+            try:
+                winreg.QueryValueEx(k, OLD_APP)
+                winreg.DeleteValue(k, OLD_APP)
+                had_startup = True
+            except OSError:
+                pass
+        if old_lnk.exists():
+            old_lnk.unlink()
+        if had_startup:
+            set_startup(True)
+    except OSError:
+        pass
 
 
 def launch_sorter(paths=()):
@@ -271,7 +303,7 @@ def fetch_latest_release(timeout: float = 8.0):
     import urllib.request
     req = urllib.request.Request(
         f"https://api.github.com/repos/{UPDATE_REPO}/releases/latest",
-        headers={"Accept": "application/vnd.github+json", "User-Agent": f"FLExportNamer/{__version__}"})
+        headers={"Accept": "application/vnd.github+json", "User-Agent": f"DAWExportFixer/{__version__}"})
     try:
         with urllib.request.urlopen(req, timeout=timeout) as r:
             data = _json.loads(r.read().decode("utf-8"))
@@ -530,7 +562,7 @@ class ExportWatcher:
             return "temp file"
         sp = str(p).lower()
         if sp in self.own_outputs:
-            return "written by Export Namer"
+            return "written by Export Fixer"
         for d in DAWS:
             beats = str(Path(daw_cfg(self.app.cfg, d)["beats_folder"])).lower().rstrip("\\/")
             if sp.startswith(beats + "\\") or sp.startswith(beats + "/"):
@@ -571,7 +603,7 @@ class ExportWatcher:
         p = Path(path)
         why = self.ignored(p)
         if why:
-            if why not in ("not audio", "written by Export Namer") and path not in self.logged_skips:
+            if why not in ("not audio", "written by Export Fixer") and path not in self.logged_skips:
                 self.logged_skips.add(path)
                 logging.info("skipped %s (%s)", path, why)
             return
@@ -786,7 +818,7 @@ ALL_KEYS = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"]
 
 class ExportPopup(ThemedWindow):
     def __init__(self, app, job: Job):
-        super().__init__(app, f"{getattr(app, 'popup_title', 'Export Namer')}  ·  {DAW_NAMES[job.daw]}", 580)
+        super().__init__(app, f"{getattr(app, 'popup_title', 'Export Fixer')}  ·  {DAW_NAMES[job.daw]}", 580)
         self.job = job
         self.cfg = cfg = daw_cfg(app.cfg, job.daw)  # this program's folders
         b, f = self.body, self.f
@@ -1134,7 +1166,7 @@ class SettingsWindow(ThemedWindow):
         self.draft = draft if draft is not None else json.loads(json.dumps(app.cfg))
         self.draft.setdefault("_startup", startup_enabled())
         app.apply_theme(cfg=daw_cfg(self.draft, self.daw), daw=self.daw)  # this tab's (unsaved) colours
-        super().__init__(app, "Export Namer · Settings" if not first_run else "Export Namer · Setup", 600)
+        super().__init__(app, "Export Fixer · Settings" if not first_run else "Export Fixer · Setup", 600)
         self.first_run, self.at = first_run, at
         d, b, f = daw_cfg(self.draft, self.daw), self.body, self.f
         name = DAW_NAMES[self.daw]
@@ -1941,7 +1973,7 @@ class App:
         if version_tuple(latest) > version_tuple(__version__):
             logging.info("update available: %s (running %s)", latest, __version__)
             try:
-                Toast(self, f"FL Export Namer {latest} is out (you have {__version__}).", seconds=12,
+                Toast(self, f"DAW Export Fixer {latest} is out (you have {__version__}).", seconds=12,
                       link=("download the update", url))
             except Exception:
                 logging.exception("update toast failed")
@@ -1989,7 +2021,7 @@ class App:
             M("Quit", lambda: self.call(self.quit)),
         )
         try:
-            self.tray = pystray.Icon("fl_export_namer", img, APP, menu)
+            self.tray = pystray.Icon("daw_export_fixer", img, APP, menu)
             threading.Thread(target=self.tray.run, daemon=True).start()
         except Exception:
             logging.exception("tray icon failed")
@@ -2046,9 +2078,10 @@ def single_instance() -> socket.socket | None:
 
 
 def main():
+    migrate_old_name()
     APPDIR.mkdir(parents=True, exist_ok=True)
     logging.basicConfig(filename=LOG_PATH, level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
-    logging.info("FL Export Namer v%s starting%s", __version__, " (installed build)" if FROZEN else "")
+    logging.info("DAW Export Fixer v%s starting%s", __version__, " (installed build)" if FROZEN else "")
     if sys.platform.startswith("win"):
         try:
             import ctypes

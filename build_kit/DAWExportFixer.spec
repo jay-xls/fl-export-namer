@@ -1,4 +1,4 @@
-# PyInstaller spec - builds dist\FL Export Namer\FL Export Namer.exe (one-folder build).
+# PyInstaller spec - builds dist\DAW Export Fixer\DAW Export Fixer.exe (one-folder build).
 # Run via build.bat, not directly.
 import sys
 from pathlib import Path
@@ -36,9 +36,9 @@ pyz = PYZ(a.pure)
 exe = EXE(
     pyz, a.scripts, [],
     exclude_binaries=True,
-    name="FL Export Namer",
+    name="DAW Export Fixer",
     icon=str(ROOT / "build_kit" / "icon.ico") if sys.platform.startswith("win") else None,
     console=False,          # no black console window
     upx=False,              # UPX-packed exes get flagged by antivirus far more often
 )
-coll = COLLECT(exe, a.binaries, a.datas, name="FL Export Namer", upx=False)
+coll = COLLECT(exe, a.binaries, a.datas, name="DAW Export Fixer", upx=False)

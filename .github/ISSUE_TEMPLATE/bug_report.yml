@@ -4,7 +4,7 @@ labels: [bug]
 body:
   - type: markdown
     attributes:
-      value: "Thanks! The log file is the most useful thing you can attach: tray icon -> **Open log** (or `%APPDATA%\\FL Export Namer\\log.txt`)."
+      value: "Thanks! The log file is the most useful thing you can attach: tray icon -> **Open log** (or `%APPDATA%\\DAW Export Fixer\\log.txt`)."
   - type: input
     id: version
     attributes:
