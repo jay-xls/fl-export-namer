@@ -6,7 +6,7 @@ already filled in, then renames the file and files it into one tidy beats folder
 **Beat Sorter** for your back catalogue: drop old, randomly named exports in and it works out the
 BPM and key from the audio. *(Formerly FL Export Namer.)*
 
-<img src="docs/img/popup.png" width="520" alt="The popup that appears after exporting: name, BPM read from the project, detected key with alternatives, version, and the final file name">
+<img src="docs/img/popup.png" width="400" alt="The popup after an FL Studio export: name Nightdrive, BPM 140 read from the project, key Fm detected with Ab and Cm as alternatives, saving as Nightdrive_140bpm_Fm_v01.wav plus mp3"> <img src="docs/img/popup-ableton.png" width="400" alt="The popup after an Ableton Live export, in Ableton colours: name Sundown, BPM 92 read from the set, key Dm from Live's Scale setting, version 3, saving as Sundown_92bpm_Dm_v03.wav">
 
 ### [⬇ Download the latest version](https://github.com/jlnorge/daw-export-fixer/releases/latest) · [📖 User guide](https://jlnorge.github.io/daw-export-fixer/)
 
